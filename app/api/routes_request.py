@@ -1,41 +1,19 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from typing import cast
 
-from app.utils import load_device
+from app.utils import build_supported_versions_map
 from app.models.ticket import TicketStatus
 from app.services.ticket_manager import TicketManager
 
 router = APIRouter()
 
-def get_valid_machines() -> dict:
-    config = load_device()
-    valid_machines = {}
-    for vendor_entry in config.get("vendors", []):
-        vendor = vendor_entry.get("vendor")
-        if not vendor:
-            continue
-        if vendor not in valid_machines:
-            valid_machines[vendor] = {}
-
-        for model_entry in vendor_entry.get("models", []):
-            model = model_entry.get("model")
-            if not model:
-                continue
-            if model not in valid_machines[vendor]:
-                valid_machines[vendor][model] = []
-
-            for version_entry in model_entry.get("versions", []):
-                version = version_entry.get("version")
-                if version and version not in valid_machines[vendor][model]:
-                    valid_machines[vendor][model].append(version)
-
-    return valid_machines
-
 def check_machine_supported(vendor: str, model: str, version: str) -> bool:
-    valid_machines = get_valid_machines()
-    return (vendor in valid_machines and
-            model in valid_machines[vendor] and
-            version in valid_machines[vendor][model])
+    valid_machines = build_supported_versions_map()
+    return (
+        vendor in valid_machines
+        and model in valid_machines[vendor]
+        and version in valid_machines[vendor][model]
+    )
 
 @router.post("/{vendor}/{model}/{version}", summary="Create request (file upload)")
 async def create_request(vendor: str, model: str, version: str, request: Request, file: UploadFile = File(...)) -> dict:
@@ -59,7 +37,10 @@ async def create_request(vendor: str, model: str, version: str, request: Request
     response = {
         "id": ticket.id,
         "status": ticket.status,
-        "message": f"Request accepted and {'started processing' if ticket.status == TicketStatus.running else 'queued'}."
+        "message": (
+            "Request accepted and "
+            f"{'started processing' if ticket.status == TicketStatus.running else 'queued'}."
+        ),
     }
 
     return response

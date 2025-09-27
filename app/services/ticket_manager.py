@@ -9,7 +9,7 @@ from pathlib import Path
 from app.models.ticket import Ticket, TicketStatus
 from app.services.task_processor import TaskProcessor
 from app.services.machine_manager import MachineManager
-from app.utils import load_device
+from app.utils import iter_device_entries
 
 
 class TicketManager:
@@ -50,45 +50,31 @@ class TicketManager:
         """
         tickets: list[Ticket] = []
 
-        cfg = load_device()
-        if not cfg:
-            print("[TicketManager] No valid machines found in config, skipping ticket reload.")
-            return tickets
-
-        for v_entry in cfg.get("vendors", []):
-            vendor = v_entry.get("vendor")
-            if not vendor:
+        has_entries = False
+        for vendor, model, version, _ in iter_device_entries():
+            has_entries = True
+            ticket_folder: Path = self.TICKET_PATH / vendor / model / str(version)
+            if not ticket_folder.exists():
                 continue
 
-            for m_entry in v_entry.get("models", []):
-                model = m_entry.get("model")
-                if not model:
-                    continue
+            for ticket_file in ticket_folder.glob("*.txt"):
+                print(f"[TicketManager] Reloading ticket from {ticket_file}")
+                ticket_id = ticket_file.stem
 
-                for ver_entry in m_entry.get("versions", []):
-                    version = ver_entry.get("version")
-                    if not version:
-                        continue
+                ticket = Ticket(
+                    id=ticket_id,
+                    version=str(version),
+                    vendor=vendor,
+                    model=model,
+                    testing_config_path=ticket_file.as_posix(),
+                    status=TicketStatus.queued,
+                )
+                # 覆蓋/更新快取中的舊 ticket
+                self._tickets_db[ticket_id] = ticket
+                tickets.append(ticket)
 
-                    ticket_folder: Path = self.TICKET_PATH / vendor / model / str(version)
-                    if not ticket_folder.exists():
-                        continue
-
-                    for ticket_file in ticket_folder.glob("*.txt"):
-                        print(f"[TicketManager] Reloading ticket from {ticket_file}")
-                        ticket_id = ticket_file.stem
-
-                        ticket = Ticket(
-                            id=ticket_id,
-                            version=str(version),
-                            vendor=vendor,
-                            model=model,
-                            testing_config_path=ticket_file.as_posix(),
-                            status=TicketStatus.queued,
-                        )
-                        # 覆蓋/更新快取中的舊 ticket
-                        self._tickets_db[ticket_id] = ticket
-                        tickets.append(ticket)
+        if not has_entries:
+            print("[TicketManager] No valid machines found in config, skipping ticket reload.")
 
         return tickets
                         

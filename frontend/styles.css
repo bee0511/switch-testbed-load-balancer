@@ -1,0 +1,314 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+:root {
+  --tsmc-red: #e60012;
+  --tsmc-dark: #1f1f1f;
+  --tsmc-gray: #6c6c6c;
+  --tsmc-light: #f5f5f5;
+  --tsmc-silver: #d9d9d9;
+  --card-radius: 16px;
+  --shadow: 0 18px 40px -20px rgba(30, 30, 30, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, rgba(230, 0, 18, 0.08), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f0f1f4 100%);
+  color: var(--tsmc-dark);
+  min-height: 100vh;
+}
+
+#root {
+  padding: 40px clamp(16px, 4vw, 72px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.app-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  font-size: clamp(1.8rem, 2.4vw, 2.6rem);
+  font-weight: 700;
+  margin: 0;
+}
+
+.app-header p {
+  margin: 0;
+  color: var(--tsmc-gray);
+  font-size: 0.95rem;
+}
+
+.filter-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: var(--card-radius);
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.field-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 18px;
+}
+
+.field-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--tsmc-light);
+  border: 1px solid transparent;
+  transition: border 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+}
+
+.field-toggle input {
+  accent-color: var(--tsmc-red);
+}
+
+.field-toggle.active {
+  border-color: var(--tsmc-red);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -18px rgba(230, 0, 18, 0.8);
+}
+
+.field-toggle span {
+  font-weight: 500;
+}
+
+.section-title {
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--tsmc-dark);
+}
+
+.field-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tsmc-gray);
+}
+
+.input-group input,
+.input-group select,
+.input-group textarea {
+  border: 1px solid var(--tsmc-silver);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+  outline: none;
+  border-color: var(--tsmc-red);
+  box-shadow: 0 0 0 4px rgba(230, 0, 18, 0.15);
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.button {
+  padding: 12px 20px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button.primary {
+  background: var(--tsmc-red);
+  color: #fff;
+  box-shadow: 0 12px 24px -12px rgba(230, 0, 18, 0.65);
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--tsmc-red);
+  border: 1px solid var(--tsmc-red);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.ticket-grid {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.ticket-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(230, 0, 18, 0.08);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ticket-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 40px -22px rgba(230, 0, 18, 0.6);
+}
+
+.ticket-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: var(--tsmc-dark);
+}
+
+.ticket-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.ticket-meta span {
+  color: var(--tsmc-gray);
+}
+
+.empty-state {
+  margin-top: 48px;
+  padding: 40px;
+  border-radius: var(--card-radius);
+  background: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  color: var(--tsmc-gray);
+  border: 1px dashed var(--tsmc-silver);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.52);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  z-index: 999;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 20px;
+  max-width: 640px;
+  width: min(90vw, 640px);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--tsmc-silver);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.modal-close {
+  border: none;
+  background: rgba(230, 0, 18, 0.1);
+  color: var(--tsmc-red);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(230, 0, 18, 0.18);
+}
+
+.modal-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--tsmc-silver);
+}
+
+.tab-button {
+  flex: 1;
+  border: none;
+  padding: 14px 0;
+  font-weight: 600;
+  background: transparent;
+  color: var(--tsmc-gray);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.tab-button.active {
+  color: var(--tsmc-red);
+  border-color: var(--tsmc-red);
+}
+
+.modal-content {
+  padding: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  background: var(--tsmc-light);
+}
+
+@media (max-width: 768px) {
+  #root {
+    padding: 24px clamp(16px, 6vw, 24px);
+  }
+
+  .field-selector {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .modal {
+    width: 100%;
+  }
+}

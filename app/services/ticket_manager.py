@@ -255,8 +255,7 @@ class TicketManager:
         if ticket:
             queue_status = self.get_queue_status()
             return self._build_ticket_response(ticket, queue_status)
-
-        return self._load_archived_ticket_response(id)
+        return self._load_ticket_response_from_archive(id)
     
     def process_ticket(self, version: str, vendor: str, model: str, data: bytes) -> Optional[Ticket]:
         ticket = self._create_ticket(version, vendor, model, data)
@@ -372,26 +371,14 @@ class TicketManager:
             return None
 
     def _load_archived_ticket_responses(self) -> list[dict]:
+        """批次載入所有 archive 票據回應"""
         responses: list[dict] = []
-
         if not self.TICKET_ARCHIVE_PATH.exists():
             return responses
-
         for json_path in self.TICKET_ARCHIVE_PATH.rglob("*.json"):
-            try:
-                with open(json_path, "r", encoding="utf-8") as file:
-                    response = json.load(file)
-            except (OSError, json.JSONDecodeError) as exc:
-                logger.warning(
-                    "Failed to load archived response from %s: %s", json_path, exc
-                )
-                continue
-
-            raw_data_path = json_path.with_suffix(".txt")
-            response["raw_data"] = self._safe_read_text(raw_data_path)
-
-            responses.append(response)
-
+            response = self._load_ticket_response_from_json(json_path)
+            if response:
+                responses.append(response)
         return responses
 
     def list_tickets(self) -> list[dict]:
@@ -409,18 +396,21 @@ class TicketManager:
 
         return tickets
 
-    def _load_archived_ticket_response(self, ticket_id: str) -> Optional[dict]:
+    def _load_ticket_response_from_archive(self, ticket_id: str) -> Optional[dict]:
+        """根據 ticket_id 讀取 archive 票據回應"""
         json_files = list(self.TICKET_ARCHIVE_PATH.rglob(f"{ticket_id}.json"))
         if not json_files:
             return None
+        return self._load_ticket_response_from_json(json_files[0])
 
-        json_path = json_files[0]
-
+    def _load_ticket_response_from_json(self, json_path: Path) -> Optional[dict]:
+        """統一讀取 json 票據回應，附加 raw_data"""
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 response = json.load(f)
         except (OSError, json.JSONDecodeError) as exc:
-            logger.error("Failed to load archived response for %s: %s", ticket_id, exc)
+            logger.error("Failed to load archived response from %s: %s", json_path, exc)
             return None
-
+        raw_data_path = json_path.with_suffix(".txt")
+        response["raw_data"] = self._safe_read_text(raw_data_path)
         return response

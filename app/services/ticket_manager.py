@@ -46,36 +46,51 @@ class TicketManager:
     
     def _reload_tickets(self) -> list[Ticket]:
         """
-        重新載入所有在檔案中未處理的票據
+        從 {TICKET_PATH}/{vendor}/{model}/{version}/*.txt 重新載入未處理票據
         """
-        ticket_list = list[Ticket]()
-        valid_machines = load_device()
-        if not valid_machines:
+        tickets: list[Ticket] = []
+
+        cfg = load_device()
+        if not cfg:
             print("[TicketManager] No valid machines found in config, skipping ticket reload.")
-            return ticket_list
-        for vendor, models in valid_machines.items():
-            if not isinstance(models, dict):
+            return tickets
+
+        for v_entry in cfg.get("vendors", []):
+            vendor = v_entry.get("vendor")
+            if not vendor:
                 continue
-            for model, versions in models.items():
-                if not isinstance(versions, dict):
+
+            for m_entry in v_entry.get("models", []):
+                model = m_entry.get("model")
+                if not model:
                     continue
-                for version in versions.keys():
-                    ticket_folder = self.TICKET_PATH / vendor / model / version
+
+                for ver_entry in m_entry.get("versions", []):
+                    version = ver_entry.get("version")
+                    if not version:
+                        continue
+
+                    ticket_folder: Path = self.TICKET_PATH / vendor / model / str(version)
+                    if not ticket_folder.exists():
+                        continue
+
                     for ticket_file in ticket_folder.glob("*.txt"):
                         print(f"[TicketManager] Reloading ticket from {ticket_file}")
                         ticket_id = ticket_file.stem
-                        with open(ticket_file, "r") as f:
-                            ticket = Ticket(
-                                id=ticket_id,
-                                version=version,
-                                vendor=vendor,
-                                model=model,
-                                testing_config_path=f"{self.TICKET_PATH}/{vendor}/{model}/{version}/{ticket_id}.txt",
-                                status=TicketStatus.queued,
-                            )
+
+                        ticket = Ticket(
+                            id=ticket_id,
+                            version=str(version),
+                            vendor=vendor,
+                            model=model,
+                            testing_config_path=ticket_file.as_posix(),
+                            status=TicketStatus.queued,
+                        )
+                        # 覆蓋/更新快取中的舊 ticket
                         self._tickets_db[ticket_id] = ticket
-                        ticket_list.append(ticket)
-        return ticket_list
+                        tickets.append(ticket)
+
+        return tickets
                         
     # ===== 票據 CRUD 操作 =====
 

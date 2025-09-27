@@ -16,23 +16,42 @@ class MachineManager:
         self._machines: Dict[str, Machine] = self._load_machines_from_config()
         
     def _load_machines_from_config(self) -> Dict[str, Machine]:
-        config = load_device()
-        if not config:
-            print("[MachineManager] No valid machines found in config.")
-            return {}
+        cfg = load_device()
         machines: Dict[str, Machine] = {}
-        for vendor, models in config.items():
-            if not isinstance(models, dict):
+
+        if not cfg:
+            print("[MachineManager] No valid machines found in config.")
+            return machines
+
+        for v_entry in cfg.get("vendors", []):
+            vendor = v_entry.get("vendor")
+            if not vendor:
                 continue
-            for model, versions in models.items():
-                if not isinstance(versions, dict):
+
+            for m_entry in v_entry.get("models", []):
+                model = m_entry.get("model")
+                if not model:
                     continue
-                for version, devices in versions.items():
-                    if not isinstance(devices, list):
+
+                for ver_entry in m_entry.get("versions", []):
+                    version = ver_entry.get("version")
+                    if not version:
                         continue
-                    for entry in devices:
-                        ip, port, serial = entry
-                        machine = Machine(
+
+                    for dev in ver_entry.get("devices", []):
+                        try:
+                            ip = str(dev["ip"])
+                            port = int(dev["port"])
+                            serial = str(dev["serial_number"])
+                        except (KeyError, TypeError, ValueError) as e:
+                            print(f"[MachineManager] Bad device entry under {vendor}/{model}/{version}: {dev} ({e})")
+                            continue
+
+                        # 若 serial 重複，後者覆蓋並提示
+                        if serial in machines:
+                            print(f"[MachineManager] Duplicate serial '{serial}' found; overriding previous entry.")
+
+                        machines[serial] = Machine(
                             vendor=vendor,
                             model=model,
                             version=version,
@@ -40,9 +59,9 @@ class MachineManager:
                             port=port,
                             serial=serial,
                         )
-                        machines[serial] = machine
-        return machines
 
+        return machines
+    
     def _check_model_supported(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
         """
         檢查機器是否支援指定的型號(可用來擴展更多條件)

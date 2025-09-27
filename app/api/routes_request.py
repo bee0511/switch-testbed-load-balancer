@@ -10,19 +10,25 @@ router = APIRouter()
 def get_valid_machines() -> dict:
     config = load_device()
     valid_machines = {}
-    for vendor, models in config.items():
-        if not isinstance(models, dict):
+    for vendor_entry in config.get("vendors", []):
+        vendor = vendor_entry.get("vendor")
+        if not vendor:
             continue
-        for model, versions in models.items():
-            if not isinstance(versions, dict):
+        if vendor not in valid_machines:
+            valid_machines[vendor] = {}
+
+        for model_entry in vendor_entry.get("models", []):
+            model = model_entry.get("model")
+            if not model:
                 continue
-            for version in versions.keys():
-                if vendor not in valid_machines:
-                    valid_machines[vendor] = {}
-                if model not in valid_machines[vendor]:
-                    valid_machines[vendor][model] = []
-                if version not in valid_machines[vendor][model]:
+            if model not in valid_machines[vendor]:
+                valid_machines[vendor][model] = []
+
+            for version_entry in model_entry.get("versions", []):
+                version = version_entry.get("version")
+                if version and version not in valid_machines[vendor][model]:
                     valid_machines[vendor][model].append(version)
+
     return valid_machines
 
 def check_machine_supported(vendor: str, model: str, version: str) -> bool:

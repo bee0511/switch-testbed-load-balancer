@@ -7,6 +7,6 @@ class Machine:
     model: str
     version: str
     ip: str
-    port: str
+    port: int
     serial: str
     ticket_id: Optional[str] = None

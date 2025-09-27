@@ -1,10 +1,12 @@
-"""
-機器管理模組 - 負責機器分配和管理
-"""
+"""機器管理模組 - 負責機器分配和管理"""
 
+import logging
 from typing import Dict, List, Optional
-from app.utils import iter_device_entries
+
 from app.models.machine import Machine
+from app.utils import iter_device_entries
+
+logger = logging.getLogger("machine_manager")
 
 class MachineManager:
     """機器管理器 - 負責機器分配、釋放和狀態管理"""
@@ -27,15 +29,20 @@ class MachineManager:
                     port = int(dev["port"])
                     serial = str(dev["serial_number"])
                 except (KeyError, TypeError, ValueError) as e:
-                    print(
-                        f"[MachineManager] Bad device entry under {vendor}/{model}/{version}: {dev} ({e})"
+                    logger.error(
+                        "Bad device entry under %s/%s/%s: %s (%s)",
+                        vendor,
+                        model,
+                        version,
+                        dev,
+                        e,
                     )
                     continue
 
                 # 若 serial 重複，後者覆蓋並提示
                 if serial in machines:
-                    print(
-                        f"[MachineManager] Duplicate serial '{serial}' found; overriding previous entry."
+                    logger.warning(
+                        "Duplicate serial '%s' found; overriding previous entry.", serial
                     )
 
                 machines[serial] = Machine(
@@ -48,7 +55,7 @@ class MachineManager:
                 )
 
         if not has_entries:
-            print("[MachineManager] No valid machines found in config.")
+            logger.warning("No valid machines found in config.")
 
         return machines
     
@@ -86,18 +93,18 @@ class MachineManager:
         """
         available_machines = self._get_available_machines(vendor, model, version)
         if not available_machines:
-            print(f"[MachineManager] No available machines for ticket: {ticket_id}")
+            logger.warning("No available machines for ticket: %s", ticket_id)
             return None
-        
+
         selected_machine = available_machines[0]
-        
+
         if not selected_machine:
-            print(f"[MachineManager] Failed to select machine for ticket: {ticket_id}")
+            logger.error("Failed to select machine for ticket: %s", ticket_id)
             return None
-        
+
         # 分配機器
         self._machines[selected_machine.serial].ticket_id = ticket_id
-        print(f"[MachineManager] Allocated machine: {selected_machine.serial} to ticket: {ticket_id}")
+        logger.info("Allocated machine: %s to ticket: %s", selected_machine.serial, ticket_id)
         return selected_machine
 
     def release_machine(self, machine: Machine) -> bool:
@@ -111,12 +118,14 @@ class MachineManager:
             bool: 是否成功釋放
         """
         if machine.serial not in self._machines:
-            print(f"[MachineManager] Machine {machine.serial} not found")
+            logger.error("Machine %s not found", machine.serial)
             return False
 
         ticket_id = self._machines[machine.serial].ticket_id
         self._machines[machine.serial].ticket_id = None
-        print(f"[MachineManager] Released machine: {machine.serial} (was processing ticket: {ticket_id})")
+        logger.info(
+            "Released machine: %s (was processing ticket: %s)", machine.serial, ticket_id
+        )
         return True
 
     def validate_ticket_machine(self, ticket_id: str, machine_serial: str) -> bool:

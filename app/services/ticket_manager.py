@@ -1,15 +1,19 @@
+import logging
 import os
-import yaml
-from typing import Dict, Optional, Deque
 from collections import deque
 from datetime import datetime
-from uuid import uuid4
 from pathlib import Path
+from typing import Deque, Dict, Optional
+from uuid import uuid4
+
+import yaml
 
 from app.models.ticket import Ticket, TicketStatus
-from app.services.task_processor import TaskProcessor
 from app.services.machine_manager import MachineManager
+from app.services.task_processor import TaskProcessor
 from app.utils import iter_device_entries
+
+logger = logging.getLogger("ticket_manager")
 
 
 class TicketManager:
@@ -42,7 +46,7 @@ class TicketManager:
         for ticket in unprocess_tickets:
             self._enqueue_ticket(ticket)
             self._consume_ticket()
-        print(f"[TicketManager] Reloaded {len(unprocess_tickets)} unprocessed tickets from storage.")
+        logger.info("Reloaded %s unprocessed tickets from storage.", len(unprocess_tickets))
     
     def _reload_tickets(self) -> list[Ticket]:
         """
@@ -58,7 +62,7 @@ class TicketManager:
                 continue
 
             for ticket_file in ticket_folder.glob("*.txt"):
-                print(f"[TicketManager] Reloading ticket from {ticket_file}")
+                logger.info("Reloading ticket from %s", ticket_file)
                 ticket_id = ticket_file.stem
 
                 ticket = Ticket(
@@ -74,7 +78,7 @@ class TicketManager:
                 tickets.append(ticket)
 
         if not has_entries:
-            print("[TicketManager] No valid machines found in config, skipping ticket reload.")
+            logger.warning("No valid machines found in config, skipping ticket reload.")
 
         return tickets
                         
@@ -109,7 +113,7 @@ class TicketManager:
             
         self._tickets_db[id] = ticket
         
-        print(f"[TicketManager] Created ticket: {ticket.id}")
+        logger.info("Created ticket: %s", ticket.id)
         return ticket
     
     def _enqueue_ticket(self, ticket: Ticket) -> bool:
@@ -123,14 +127,14 @@ class TicketManager:
             bool: 是否成功加入佇列
         """
         if not ticket:
-            print(f"[TicketManager] Invalid ticket provided for enqueue")
+            logger.warning("Invalid ticket provided for enqueue")
             return False
         if ticket.status != TicketStatus.queued:
-            print(f"[TicketManager] Ticket {ticket.id} is not in queued status")
+            logger.warning("Ticket %s is not in queued status", ticket.id)
             return False
 
         self._ticket_queue.append(ticket)
-        print(f"[TicketManager] Enqueued ticket: {ticket.id}")
+        logger.info("Enqueued ticket: %s", ticket.id)
         return True
 
     def _update_ticket(self, ticket: Ticket, **kwargs) -> bool:
@@ -145,7 +149,7 @@ class TicketManager:
             bool: 是否更新成功
         """
         if not ticket:
-            print(f"[TicketManager] Invalid ticket provided for update")
+            logger.warning("Invalid ticket provided for update")
             return False
         
         for key, value in kwargs.items():
@@ -164,16 +168,18 @@ class TicketManager:
             success: 是否成功
         """
         if not ticket:
-            print(f"[TicketManager] Ticket {ticket.id} not found for completion")
+            logger.error("Ticket %s not found for completion", getattr(ticket, "id", "<unknown>"))
             return
-        
+
         if not ticket.machine:
-            print(f"[TicketManager] Ticket {ticket.id} has no machine allocated")
+            logger.error("Ticket %s has no machine allocated", ticket.id)
             return
-        
+
         # 確認機器確實被分配給這個票據
         if not self.machine_manager.validate_ticket_machine(ticket.id, ticket.machine.serial):
-            print(f"[TicketManager] Machine {ticket.machine.serial} is not allocated to ticket {ticket.id}")
+            logger.error(
+                "Machine %s is not allocated to ticket %s", ticket.machine.serial, ticket.id
+            )
             return
 
         # 釋放機器
@@ -188,7 +194,7 @@ class TicketManager:
             result_data=result_data
         )
 
-        print(f"curl \"http://127.0.0.1:8000/result/{ticket.id}\" | jq .")
+        logger.info("curl \"http://127.0.0.1:8000/result/%s\" | jq .", ticket.id)
         
         self._consume_ticket()  # 嘗試處理下一個票據
     
@@ -246,10 +252,10 @@ class TicketManager:
         """
         ticket = self.get_ticket(id)
         if not ticket:
-            print(f"[TicketManager] Ticket {id} not found for deletion")
+            logger.warning("Ticket %s not found for deletion", id)
             return
 
-        print(f"[TicketManager] Deleting ticket {id}")
+        logger.info("Deleting ticket %s", id)
         
         # 刪除檔案
         if os.path.exists(ticket.testing_config_path):

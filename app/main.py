@@ -1,8 +1,15 @@
+import logging
+
 from fastapi import FastAPI
+
 from app.api.routes_request import router as request_router
 from app.api.routes_result import router as result_router
 from app.api.routes_reset import router as reset_router
+from app.logging_config import setup_logging
 from app.services.ticket_manager import TicketManager
+
+setup_logging()
+logger = logging.getLogger("app.main")
 
 ticket_manager = TicketManager()
 
@@ -18,3 +25,7 @@ app.include_router(reset_router, prefix="/reset", tags=["reset"])
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
+
+
+logger.info("Batch Load Balancer API application initialized.")
+

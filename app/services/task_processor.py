@@ -1,9 +1,12 @@
 import asyncio
+import logging
 import threading
 from typing import Callable, Optional
 
-from app.models.ticket import Ticket
 from app.models.machine import Machine
+from app.models.ticket import Ticket
+
+logger = logging.getLogger("task_processor")
 
 class TaskProcessor:
     def __init__(self, completion_callback: Callable[[Ticket, Optional[str], bool], None]):
@@ -38,7 +41,7 @@ class TaskProcessor:
             self.completion_callback(ticket, result_data, success)
 
         except Exception as e:
-            print(f"[TaskProcessor] Error in task {ticket}: {str(e)}")
+            logger.exception("Error in task %s: %s", ticket.id if ticket else "<unknown>", e)
             # 通知 TicketManager 任務失敗
             self.completion_callback(ticket, f"Error: {str(e)}", False)
 
@@ -54,7 +57,7 @@ class TaskProcessor:
         # add lock for thread safety if needed
         await asyncio.sleep(1)  # Simulate reset delay
         
-        print(f"[TaskProcessor] Machine {machine.serial} reset complete.")
+        logger.info("Machine %s reset complete.", machine.serial)
         return True
 
     def start_background_task(self, ticket: Ticket):
@@ -63,4 +66,5 @@ class TaskProcessor:
             asyncio.run(self._execute_task(ticket))
         
         threading.Thread(target=run_task, daemon=True).start()
-        print(f"[TaskProcessor] Started background task for {ticket.id}")
+        logger.info("Started background task for %s", ticket.id)
+

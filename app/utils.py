@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Iterator, Tuple
@@ -5,6 +6,8 @@ from typing import Dict, Iterator, Tuple
 import yaml
 
 from app.models.device_config import DeviceConfig, VersionEntry
+
+logger = logging.getLogger("app.utils")
 
 
 @lru_cache()
@@ -15,7 +18,7 @@ def load_device() -> DeviceConfig:
         with open(config_path, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file) or {}
     except Exception as e:
-        print(f"Error loading device.yaml: {e}")
+        logger.exception("Error loading device.yaml: %s", e)
         data = {}
 
     vendors = data.get("vendors", []) if isinstance(data, dict) else []

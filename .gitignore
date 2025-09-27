@@ -154,6 +154,7 @@ venv.bak/
 # Frontend build artifacts
 frontend/node_modules/
 frontend/dist/
+frontend/.vite
 
 # mkdocs documentation
 /site

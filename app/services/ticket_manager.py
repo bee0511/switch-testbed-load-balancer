@@ -249,48 +249,14 @@ class TicketManager:
         self.task_processor.start_background_task(ticket)
         return True
     
-    # ===== 公開方法 =====
-    def get_ticket(self, id: str) -> Optional[Ticket]:
-        """
-        取得票據
-
-        Args:
-            id: 票據ID
-
-        Returns:
-            Optional[Ticket]: 票據物件，如果不存在則返回 None
-        """
-        return self._tickets_db.get(id)
-
     def get_ticket_response(self, id: str) -> Optional[dict]:
         """取得票據回傳內容，優先從 active 票據，若無則從 archive 讀取"""
-        ticket = self.get_ticket(id)
+        ticket = self._tickets_db.get(id)
         if ticket:
             queue_status = self.get_queue_status()
             return self._build_ticket_response(ticket, queue_status)
 
         return self._load_archived_ticket_response(id)
-    
-    def delete_ticket(self, id: str) -> None:
-        """
-        刪除票據和相關檔案
-        
-        Args:
-            id: 票據ID
-        """
-        ticket = self.get_ticket(id)
-        if not ticket:
-            logger.warning("Ticket %s not found for deletion", id)
-            return
-
-        logger.info("Deleting ticket %s", id)
-        
-        # 刪除檔案
-        if os.path.exists(ticket.testing_config_path):
-            os.remove(ticket.testing_config_path)
-
-        # 從記憶體中移除
-        self._tickets_db.pop(id, None)
     
     def process_ticket(self, version: str, vendor: str, model: str, data: bytes) -> Optional[Ticket]:
         ticket = self._create_ticket(version, vendor, model, data)

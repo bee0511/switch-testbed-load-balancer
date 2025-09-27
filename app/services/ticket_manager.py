@@ -1,5 +1,7 @@
+import json
 import logging
 import os
+import shutil
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -26,7 +28,14 @@ class TicketManager:
         # 載入配置
         self.CONFIG_PATH = Path(__file__).parent.parent.parent / "config.yaml"
 
-        self.TICKET_PATH = Path(yaml.safe_load(open(self.CONFIG_PATH, 'r'))["TICKET_PATH"])
+        with open(self.CONFIG_PATH, "r", encoding="utf-8") as config_file:
+            config = yaml.safe_load(config_file)
+
+        self.TICKET_PATH = Path(config["TICKET_PATH"])
+        self.TICKET_ACTIVE_PATH = self.TICKET_PATH / "active"
+        self.TICKET_ARCHIVE_PATH = self.TICKET_PATH / "archive"
+        self.TICKET_ACTIVE_PATH.mkdir(parents=True, exist_ok=True)
+        self.TICKET_ARCHIVE_PATH.mkdir(parents=True, exist_ok=True)
         
         self._ticket_queue: Deque[Ticket] = deque()
         
@@ -57,7 +66,9 @@ class TicketManager:
         has_entries = False
         for vendor, model, version, _ in iter_device_entries():
             has_entries = True
-            ticket_folder: Path = self.TICKET_PATH / vendor / model / str(version)
+            ticket_folder: Path = (
+                self.TICKET_ACTIVE_PATH / vendor / model / str(version)
+            )
             if not ticket_folder.exists():
                 continue
 
@@ -95,20 +106,26 @@ class TicketManager:
             data: 檔案資料
         """
         id = str(uuid4())
+        ticket_dir = (
+            self.TICKET_ACTIVE_PATH
+            / vendor
+            / model
+            / version
+        )
+        ticket_dir.mkdir(parents=True, exist_ok=True)
+
+        testing_config_path = ticket_dir / f"{id}.txt"
         ticket = Ticket(
             id=id,
             version=version,
             vendor=vendor,
             model=model,
-            testing_config_path=f"{self.TICKET_PATH}/{vendor}/{model}/{version}/{id}.txt",
+            testing_config_path=testing_config_path.as_posix(),
             status=TicketStatus.queued,
         )
 
         # 儲存檔案和票據資料
-        ticket_dir = self.TICKET_PATH / ticket.vendor / ticket.model / ticket.version
-        ticket_dir.mkdir(parents=True, exist_ok=True)
-
-        with open(ticket.testing_config_path, "wb") as f:
+        with open(testing_config_path, "wb") as f:
             f.write(data)
             
         self._tickets_db[id] = ticket
@@ -194,8 +211,10 @@ class TicketManager:
             result_data=result_data
         )
 
+        self._archive_ticket(ticket)
+
         logger.info("curl \"http://127.0.0.1:8000/result/%s\" | jq .", ticket.id)
-        
+
         self._consume_ticket()  # 嘗試處理下一個票據
     
     # ===== 佇列處理邏輯 =====
@@ -234,14 +253,23 @@ class TicketManager:
     def get_ticket(self, id: str) -> Optional[Ticket]:
         """
         取得票據
-        
+
         Args:
             id: 票據ID
-            
+
         Returns:
             Optional[Ticket]: 票據物件，如果不存在則返回 None
         """
         return self._tickets_db.get(id)
+
+    def get_ticket_response(self, id: str) -> Optional[dict]:
+        """取得票據回傳內容，優先從 active 票據，若無則從 archive 讀取"""
+        ticket = self.get_ticket(id)
+        if ticket:
+            queue_status = self.get_queue_status()
+            return self._build_ticket_response(ticket, queue_status)
+
+        return self._load_archived_ticket_response(id)
     
     def delete_ticket(self, id: str) -> None:
         """
@@ -278,12 +306,12 @@ class TicketManager:
     def get_queue_status(self) -> Dict:
         """
         取得佇列和機器狀態
-        
+
         Returns:
             Dict: 包含佇列狀態的字典
         """
         queue_tickets = list(self._ticket_queue)
-        
+
         return {
             "queued_count": len(self._ticket_queue),
             "running_count": self.machine_manager.get_running_count(),
@@ -293,3 +321,94 @@ class TicketManager:
                 for idx, ticket in enumerate(queue_tickets)
             }
         }
+
+    def _build_ticket_response(self, ticket: Ticket, queue_status: Dict) -> dict:
+        position = queue_status.get("queue_position", {}).get(ticket.id, 0)
+
+        status_value = ticket.status.value if isinstance(ticket.status, TicketStatus) else ticket.status
+
+        response = {
+            "id": ticket.id,
+            "status": status_value,
+            "vendor": ticket.vendor,
+            "model": ticket.model,
+            "version": ticket.version,
+            "enqueued_at": ticket.enqueued_at,
+            "started_at": ticket.started_at,
+            "completed_at": ticket.completed_at,
+            "machine": {
+                "serial": ticket.machine.serial,
+                "ip": ticket.machine.ip,
+                "port": ticket.machine.port
+            } if ticket.machine else None,
+            "completed": ticket.status in {TicketStatus.completed, TicketStatus.failed},
+        }
+
+        if ticket.status == TicketStatus.queued:
+            response["message"] = f"Ticket is in queue at position {position}"
+            response["position"] = position
+        elif ticket.status == TicketStatus.running:
+            response["message"] = (
+                f"Ticket is running on {ticket.machine.serial if ticket.machine else 'unknown machine'}"
+            )
+        elif ticket.status == TicketStatus.completed:
+            response["message"] = "Ticket completed successfully"
+            response["result_data"] = ticket.result_data
+        elif ticket.status == TicketStatus.failed:
+            response["message"] = "Ticket processing failed"
+            response["result_data"] = ticket.result_data
+
+        return response
+
+    def _archive_ticket(self, ticket: Ticket) -> None:
+        """將票據移動到 archive 並保存回傳 JSON"""
+        # 完成後不再需要佇列資訊
+        response = self._build_ticket_response(ticket, {"queue_position": {}})
+
+        archive_dir = (
+            self.TICKET_ARCHIVE_PATH
+            / ticket.vendor
+            / ticket.model
+            / ticket.version
+            / ticket.id
+        )
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+        active_file_path = Path(ticket.testing_config_path)
+        if active_file_path.exists():
+            archive_config_path = archive_dir / f"{ticket.id}.txt"
+            try:
+                shutil.move(active_file_path, archive_config_path)
+            except shutil.Error:
+                logger.warning(
+                    "Failed to move ticket config for %s, attempting copy", ticket.id
+                )
+                shutil.copy(active_file_path, archive_config_path)
+                os.remove(active_file_path)
+        else:
+            logger.warning(
+                "Active config file not found for ticket %s when archiving", ticket.id
+            )
+
+        json_path = archive_dir / f"{ticket.id}.json"
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(response, f, ensure_ascii=False, indent=2, default=str)
+
+        # 從 active 清除票據
+        self._tickets_db.pop(ticket.id, None)
+
+    def _load_archived_ticket_response(self, ticket_id: str) -> Optional[dict]:
+        json_files = list(self.TICKET_ARCHIVE_PATH.rglob(f"{ticket_id}.json"))
+        if not json_files:
+            return None
+
+        json_path = json_files[0]
+
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                response = json.load(f)
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.error("Failed to load archived response for %s: %s", ticket_id, exc)
+            return None
+
+        return response

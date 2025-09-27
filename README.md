@@ -31,7 +31,7 @@ A FastAPI-based load balancer for switch testbed management.
    npm run build
    ```
 
-若後端尚未提供篩選 API，前端會自動載入範例 ticket 資料以便開發與預覽。
+前端會透過 `/tickets/search` API 與後端整合，請確保後端服務已啟動並可供存取。
 
 ### 前置需求
 
@@ -119,7 +119,8 @@ app/
 ├── api/             # API 路由
 │   ├── routes_request.py
 │   ├── routes_reset.py
-│   └── routes_result.py
+│   ├── routes_result.py
+│   └── routes_tickets.py
 ├── models/          # 資料模型
 │   ├── machine.py
 │   └── ticket.py

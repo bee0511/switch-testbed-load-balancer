@@ -15,17 +15,39 @@ const initialFilters: FilterState = {
     completed_at: {}
   },
   resultData: "",
-  rawData: ""
+  rawData: "",
 };
 
+function cloneFilters(filters: FilterState): FilterState {
+  return {
+    activeFields: [...filters.activeFields],
+    fieldValues: { ...filters.fieldValues },
+    dateRanges: Object.fromEntries(
+      Object.entries(filters.dateRanges).map(([key, range]) => [key, { ...range }])
+    ) as FilterState["dateRanges"],
+    resultData: filters.resultData,
+    rawData: filters.rawData,
+  };
+}
+
 export default function App() {
-  const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const { tickets, loading, error } = useTickets(filters);
+  const [pendingFilters, setPendingFilters] = useState<FilterState>(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters);
+  const { tickets, loading, error } = useTickets(appliedFilters);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
+  const submitFilters = () => {
+    setAppliedFilters(cloneFilters(pendingFilters));
+  };
 
   return (
     <div className="layout">
-      <FilterPanel filters={filters} onChange={setFilters} />
+      <FilterPanel
+        filters={pendingFilters}
+        onChange={setPendingFilters}
+        onSubmit={submitFilters}
+        submitting={loading}
+      />
 
       <section className="results">
         <header className="results__header">

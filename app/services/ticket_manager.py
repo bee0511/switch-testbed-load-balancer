@@ -363,6 +363,52 @@ class TicketManager:
         # 從 active 清除票據
         self._tickets_db.pop(ticket.id, None)
 
+    def _safe_read_text(self, path: Path) -> Optional[str]:
+        try:
+            with open(path, "r", encoding="utf-8") as file:
+                return file.read()
+        except OSError as exc:
+            logger.warning("Failed to read ticket data from %s: %s", path, exc)
+            return None
+
+    def _load_archived_ticket_responses(self) -> list[dict]:
+        responses: list[dict] = []
+
+        if not self.TICKET_ARCHIVE_PATH.exists():
+            return responses
+
+        for json_path in self.TICKET_ARCHIVE_PATH.rglob("*.json"):
+            try:
+                with open(json_path, "r", encoding="utf-8") as file:
+                    response = json.load(file)
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning(
+                    "Failed to load archived response from %s: %s", json_path, exc
+                )
+                continue
+
+            raw_data_path = json_path.with_suffix(".txt")
+            response["raw_data"] = self._safe_read_text(raw_data_path)
+
+            responses.append(response)
+
+        return responses
+
+    def list_tickets(self) -> list[dict]:
+        queue_status = self.get_queue_status()
+
+        tickets: list[dict] = []
+        for ticket in self._tickets_db.values():
+            response = self._build_ticket_response(ticket, queue_status)
+            if ticket.result_data and not response.get("result_data"):
+                response["result_data"] = ticket.result_data
+            response["raw_data"] = self._safe_read_text(Path(ticket.testing_config_path))
+            tickets.append(response)
+
+        tickets.extend(self._load_archived_ticket_responses())
+
+        return tickets
+
     def _load_archived_ticket_response(self, ticket_id: str) -> Optional[dict]:
         json_files = list(self.TICKET_ARCHIVE_PATH.rglob(f"{ticket_id}.json"))
         if not json_files:

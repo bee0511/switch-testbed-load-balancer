@@ -15,9 +15,11 @@ const FILTER_FIELDS: { key: FilterField; label: string }[] = [
 interface FilterPanelProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
+  onSubmit: () => void;
+  submitting?: boolean;
 }
 
-export function FilterPanel({ filters, onChange }: FilterPanelProps) {
+export function FilterPanel({ filters, onChange, onSubmit, submitting = false }: FilterPanelProps) {
   const toggleField = (field: FilterField) => {
     const isActive = filters.activeFields.includes(field);
     const nextFields = isActive
@@ -153,6 +155,12 @@ export function FilterPanel({ filters, onChange }: FilterPanelProps) {
             />
           </label>
         </div>
+      </div>
+
+      <div className="filter-actions">
+        <button type="button" onClick={onSubmit} disabled={submitting}>
+          {submitting ? "搜尋中..." : "送出查詢"}
+        </button>
       </div>
     </section>
   );

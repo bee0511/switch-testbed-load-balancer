@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_request import router as request_router
 from app.api.routes_reset import router as reset_router
@@ -15,7 +16,13 @@ logger = logging.getLogger("app.main")
 ticket_manager = TicketManager()
 
 app = FastAPI(title="Batch Load Balancer API", version="1.0.0")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.state.ticket_manager = ticket_manager
 
 app.include_router(request_router, prefix="/request", tags=["request"])

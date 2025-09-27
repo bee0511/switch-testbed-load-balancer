@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.models.machine import Machine
 from app.models.ticket import Ticket
 from app.services.ticket_manager import TicketManager
+from app.logging_config import logging
 
 
 def _build_allowed_fields() -> Tuple[str, ...]:
@@ -74,6 +75,7 @@ class TicketSearchRequest(BaseModel):
 
 def _build_ticket_model(ticket_data: dict) -> Optional[Ticket]:
     payload = {key: ticket_data.get(key) for key in Ticket.model_fields}
+    payload["testing_config_path"] = "" # No need to show this field
     machine_data = ticket_data.get("machine")
     if isinstance(machine_data, dict):
         try:
@@ -172,6 +174,7 @@ def _matches(ticket: Ticket, source: dict, payload: TicketSearchRequest) -> bool
 
 
 router = APIRouter()
+logger = logging.getLogger("app.api.routes_tickets")
 
 
 @router.post("/search")
@@ -186,8 +189,9 @@ def search_tickets(payload: TicketSearchRequest, request: Request) -> dict:
     for ticket_data in tickets:
         ticket_model = _build_ticket_model(ticket_data)
         if not ticket_model:
+            logging.warning("Invalid ticket data found for ticket: %s", ticket_data["id"])
             continue
         if _matches(ticket_model, ticket_data, payload):
             matched.append(ticket_data)
-
+    logger.info("Ticket search found %d matching tickets", len(matched))
     return {"tickets": jsonable_encoder(matched)}

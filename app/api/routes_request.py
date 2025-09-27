@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Request
+from typing import cast
 
-from app.models.ticket import TicketStatus
 from app.utils import load_device
+from app.models.ticket import TicketStatus
+from app.services.ticket_manager import TicketManager
 
 router = APIRouter()
 
@@ -30,19 +32,23 @@ def check_machine_supported(vendor: str, model: str, version: str) -> bool:
             version in valid_machines[vendor][model])
 
 @router.post("/{vendor}/{model}/{version}", summary="Create request (file upload)")
-async def create_request(vendor: str, model: str, version: str, request: Request, file: UploadFile = File(...)):
+async def create_request(vendor: str, model: str, version: str, request: Request, file: UploadFile = File(...)) -> dict:
     data = await file.read()
     if not data:
-        return HTTPException(status_code=400, detail="file is empty")
+        raise HTTPException(status_code=400, detail="file is empty")
 
     if not check_machine_supported(vendor, model, version):
-        return HTTPException(status_code=400, detail="The specified vendor/model/version is not supported")
+        raise HTTPException(status_code=400, detail="The specified vendor/model/version is not supported")
     
     ticket_manager = request.app.state.ticket_manager
+    if not ticket_manager:
+        raise HTTPException(status_code=500, detail="Ticket manager is not initialized")
     
+    ticket_manager = cast(TicketManager, ticket_manager)
+
     ticket = ticket_manager.process_ticket(version, vendor, model, data)
     if not ticket:
-        return HTTPException(status_code=500, detail="Failed when processing the ticket")
+        raise HTTPException(status_code=500, detail="Failed when processing the ticket")
     
     response = {
         "id": ticket.id,

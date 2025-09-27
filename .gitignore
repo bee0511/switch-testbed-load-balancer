@@ -211,3 +211,5 @@ data/
 
 # Config folder
 cfg/
+
+/.vscode

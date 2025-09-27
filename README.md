@@ -6,6 +6,33 @@ A FastAPI-based load balancer for switch testbed management.
 
 本專案使用 [uv](https://docs.astral.sh/uv/) 作為包管理工具。
 
+### 前端 (React) 開發
+
+專案根目錄下的 `frontend/` 目錄提供 ticket 查詢介面的 React 應用程式，採用 Vite 建置。
+
+1. 安裝依賴：
+
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+2. 啟動開發伺服器：
+
+   ```bash
+   npm run dev
+   ```
+
+   預設於 http://localhost:5173 執行，可透過 `VITE_API_BASE_URL` 環境變數指定後端 API 位址。
+
+3. 打包建置：
+
+   ```bash
+   npm run build
+   ```
+
+若後端尚未提供篩選 API，前端會自動載入範例 ticket 資料以便開發與預覽。
+
 ### 前置需求
 
 確保您已安裝 `uv`：

@@ -3,7 +3,7 @@
 """
 
 from typing import Dict, List, Optional
-from app.utils import load_device
+from app.utils import iter_device_entries
 from app.models.machine import Machine
 
 class MachineManager:
@@ -16,49 +16,39 @@ class MachineManager:
         self._machines: Dict[str, Machine] = self._load_machines_from_config()
         
     def _load_machines_from_config(self) -> Dict[str, Machine]:
-        cfg = load_device()
         machines: Dict[str, Machine] = {}
 
-        if not cfg:
-            print("[MachineManager] No valid machines found in config.")
-            return machines
-
-        for v_entry in cfg.get("vendors", []):
-            vendor = v_entry.get("vendor")
-            if not vendor:
-                continue
-
-            for m_entry in v_entry.get("models", []):
-                model = m_entry.get("model")
-                if not model:
+        has_entries = False
+        for vendor, model, version, version_entry in iter_device_entries():
+            has_entries = True
+            for dev in version_entry.get("devices", []):
+                try:
+                    ip = str(dev["ip"])
+                    port = int(dev["port"])
+                    serial = str(dev["serial_number"])
+                except (KeyError, TypeError, ValueError) as e:
+                    print(
+                        f"[MachineManager] Bad device entry under {vendor}/{model}/{version}: {dev} ({e})"
+                    )
                     continue
 
-                for ver_entry in m_entry.get("versions", []):
-                    version = ver_entry.get("version")
-                    if not version:
-                        continue
+                # 若 serial 重複，後者覆蓋並提示
+                if serial in machines:
+                    print(
+                        f"[MachineManager] Duplicate serial '{serial}' found; overriding previous entry."
+                    )
 
-                    for dev in ver_entry.get("devices", []):
-                        try:
-                            ip = str(dev["ip"])
-                            port = int(dev["port"])
-                            serial = str(dev["serial_number"])
-                        except (KeyError, TypeError, ValueError) as e:
-                            print(f"[MachineManager] Bad device entry under {vendor}/{model}/{version}: {dev} ({e})")
-                            continue
+                machines[serial] = Machine(
+                    vendor=vendor,
+                    model=model,
+                    version=version,
+                    ip=ip,
+                    port=port,
+                    serial=serial,
+                )
 
-                        # 若 serial 重複，後者覆蓋並提示
-                        if serial in machines:
-                            print(f"[MachineManager] Duplicate serial '{serial}' found; overriding previous entry.")
-
-                        machines[serial] = Machine(
-                            vendor=vendor,
-                            model=model,
-                            version=version,
-                            ip=ip,
-                            port=port,
-                            serial=serial,
-                        )
+        if not has_entries:
+            print("[MachineManager] No valid machines found in config.")
 
         return machines
     

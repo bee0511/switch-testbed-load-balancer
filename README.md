@@ -1,18 +1,22 @@
 # switch-testbed-load-balancer
 
+![Backend Pulls](https://img.shields.io/docker/pulls/bee000092/switch-testbed-backend.svg)
+![Frontend Pulls](https://img.shields.io/docker/pulls/bee000092/switch-testbed-frontend.svg)
+
 A FastAPI-based load balancer for switch testbed management.
 
-## 開發環境設置
+## 後端開發環境設置
 
-本專案使用 [uv](https://docs.astral.sh/uv/) 作為包管理工具。
+後端使用 [uv](https://docs.astral.sh/uv/) 作為包管理工具。
 
-後端可以透過以下指令開啟:
+可透過以下指令安裝必要的 packages 以及將後端啟動:
 
 ```bash
+make install
 make run
 ```
 
-### 前端 (React) 開發
+## 前端開發環境設置
 
 專案根目錄下的 `frontend/` 目錄提供 ticket 查詢介面的 React 應用程式，採用 Vite 建置。
 
@@ -29,4 +33,4 @@ make run
    npm run dev
    ```
 
-   預設於 http://localhost:5173 執行，可透過 `VITE_API_BASE_URL` 環境變數指定後端 API 位址。
+   預設於 http://localhost:5173 執行。

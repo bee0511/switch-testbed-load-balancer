@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FilterPanel } from "./components/FilterPanel";
+import { FilterMenu } from "./components/FilterMenu";
 import { TicketCard } from "./components/TicketCard";
 import { TicketModal } from "./components/TicketModal";
 import { useTickets } from "./hooks/useTickets";
@@ -41,35 +41,50 @@ export default function App() {
   };
 
   return (
-    <div className="layout">
-      <FilterPanel
-        filters={pendingFilters}
-        onChange={setPendingFilters}
-        onSubmit={submitFilters}
-        submitting={loading}
-      />
-
-      <section className="results">
-        <header className="results__header">
-          <div>
-            <h2>搜尋結果</h2>
-            <p>共 {tickets.length} 筆符合條件的 ticket。</p>
+    <div className="app-shell">
+      <header className="hero">
+        <div className="hero__overlay">
+          <div className="hero__content">
+            <div className="hero__branding">
+              <span className="hero__badge">TSMC Network Lab</span>
+              <h1>Switch Ticket Explorer</h1>
+              <p>
+                使用全新台積電色系介面，彈性配置廠商、型號、版本與裝置資訊，一次鎖定目標 ticket。
+              </p>
+            </div>
+            <FilterMenu
+              filters={pendingFilters}
+              onChange={setPendingFilters}
+              onSubmit={submitFilters}
+              submitting={loading}
+            />
           </div>
-          {loading && <span className="pill">載入中...</span>}
-        </header>
-
-        {error && <div className="alert">{error}</div>}
-
-        {!loading && tickets.length === 0 && (
-          <p className="empty">找不到符合條件的 ticket，請調整搜尋條件。</p>
-        )}
-
-        <div className="card-grid">
-          {tickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} onClick={setSelectedTicket} />
-          ))}
         </div>
-      </section>
+      </header>
+
+      <main className="content">
+        <section className="results">
+          <header className="results__header">
+            <div>
+              <h2>搜尋結果</h2>
+              <p>共 {tickets.length} 筆符合條件的 ticket。</p>
+            </div>
+            {loading && <span className="pill">載入中...</span>}
+          </header>
+
+          {error && <div className="alert">{error}</div>}
+
+          {!loading && tickets.length === 0 && (
+            <p className="empty">找不到符合條件的 ticket，請調整搜尋條件。</p>
+          )}
+
+          <div className="card-grid">
+            {tickets.map((ticket) => (
+              <TicketCard key={ticket.id} ticket={ticket} onClick={setSelectedTicket} />
+            ))}
+          </div>
+        </section>
+      </main>
 
       <TicketModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
     </div>

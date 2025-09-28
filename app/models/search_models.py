@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import fields as dataclass_fields
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -55,7 +55,9 @@ class TicketSearchRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     active_fields: List[str] = Field(default_factory=list, alias="activeFields")
-    field_values: Dict[str, str] = Field(default_factory=dict, alias="fieldValues")
+    field_values: Dict[str, Union[str, Sequence[str]]] = Field(
+        default_factory=dict, alias="fieldValues"
+    )
     date_ranges: Dict[str, DateRange] = Field(default_factory=dict, alias="dateRanges")
     result_data: Optional[str] = Field(default=None, alias="resultData")
     raw_data: Optional[str] = Field(default=None, alias="rawData")
@@ -77,5 +79,19 @@ class TicketSearchRequest(BaseModel):
                 "date_ranges": invalid_dates,
             }
             raise ValueError(f"Invalid ticket fields supplied: {detail}")
+
+        normalized: Dict[str, Union[str, List[str]]] = {}
+        for field, value in self.field_values.items():
+            if isinstance(value, str):
+                normalized[field] = value
+            else:
+                cleaned: List[str] = []
+                for item in value:
+                    text = str(item).strip()
+                    if text and text not in cleaned:
+                        cleaned.append(text)
+                normalized[field] = cleaned
+
+        self.field_values = normalized
 
         return self

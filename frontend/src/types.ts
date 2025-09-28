@@ -1,11 +1,5 @@
 export type TicketStatus = "queued" | "running" | "completed" | "failed";
 
-export interface MachineInfo {
-  serial: string;
-  ip: string;
-  port: number;
-}
-
 export interface Ticket {
   id: string;
   status: TicketStatus;
@@ -19,6 +13,12 @@ export interface Ticket {
   result_data?: string | null;
   raw_data?: string | null;
   message?: string;
+}
+
+export interface MachineInfo {
+  serial: string;
+  ip: string;
+  port: number;
 }
 
 export type FilterField =
@@ -40,8 +40,33 @@ export interface DateRange {
 
 export interface FilterState {
   activeFields: FilterField[];
-  fieldValues: Partial<Record<FilterField, string>>;
+  fieldValues: Partial<Record<FilterField, string | string[]>>;
   dateRanges: Record<DateField, DateRange>;
   resultData: string;
   rawData: string;
+}
+
+export interface DevicePortEntry {
+  ip: string;
+  port: number;
+  serial_number: string;
+}
+
+export interface DeviceVersionEntry {
+  version: string;
+  devices: DevicePortEntry[];
+}
+
+export interface DeviceModelEntry {
+  model: string;
+  versions: DeviceVersionEntry[];
+}
+
+export interface DeviceVendorEntry {
+  vendor: string;
+  models: DeviceModelEntry[];
+}
+
+export interface DeviceConfigResponse {
+  vendors: DeviceVendorEntry[];
 }

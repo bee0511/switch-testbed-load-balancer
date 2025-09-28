@@ -4,14 +4,27 @@ import type { FilterState, Ticket } from "../types";
 const API_PATH = "/tickets/search";
 const DEFAULT_BASE_URL = "http://localhost:8000";
 
-function sanitizeFieldValues(filters: FilterState): Partial<Record<string, string>> {
-  const values: Partial<Record<string, string>> = {};
+type SanitizedFieldValues = Record<string, string | string[]>;
 
-  filters.activeFields.forEach((field) => {
-    const rawValue = filters.fieldValues[field];
-    const trimmed = rawValue?.trim();
-    if (trimmed) {
-      values[field] = trimmed;
+function sanitizeFieldValues(filters: FilterState): SanitizedFieldValues {
+  const values: SanitizedFieldValues = {};
+
+  Object.entries(filters.fieldValues).forEach(([field, rawValue]) => {
+    if (Array.isArray(rawValue)) {
+      const cleaned = rawValue
+        .map((item) => item.trim())
+        .filter((item, index, array) => item.length > 0 && array.indexOf(item) === index);
+      if (cleaned.length > 0) {
+        values[field] = cleaned;
+      }
+      return;
+    }
+
+    if (typeof rawValue === "string") {
+      const trimmed = rawValue.trim();
+      if (trimmed) {
+        values[field] = trimmed;
+      }
     }
   });
 
@@ -39,9 +52,10 @@ function sanitizeDateRanges(filters: FilterState): Record<string, { from?: strin
 }
 
 function buildPayload(filters: FilterState) {
+  const sanitizedFields = sanitizeFieldValues(filters);
   return {
-    activeFields: filters.activeFields,
-    fieldValues: sanitizeFieldValues(filters),
+    activeFields: filters.activeFields.filter((field) => field in sanitizedFields),
+    fieldValues: sanitizedFields,
     dateRanges: sanitizeDateRanges(filters),
     resultData: filters.resultData.trim(),
     rawData: filters.rawData.trim(),

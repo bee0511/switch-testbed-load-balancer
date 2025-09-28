@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Sequence, Union
 
 from pydantic import ValidationError
 
@@ -87,19 +87,53 @@ class TicketSearchMatcher:
         if not value:
             return False
         return expected.lower() in value.lower()
-    
+
     def _normalize_search_term(self, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
         trimmed = value.strip()
         return trimmed or None
-    
+
+    def _normalize_expected_values(
+        self, expected: Optional[Union[str, Sequence[str]]]
+    ) -> list[str]:
+        if expected is None:
+            return []
+        if isinstance(expected, str):
+            normalized = self._normalize_search_term(expected)
+            return [normalized] if normalized else []
+
+        values: list[str] = []
+        for item in expected:
+            normalized = self._normalize_search_term(str(item))
+            if normalized:
+                values.append(normalized)
+        return values
+
+    def _matches_field(
+        self,
+        ticket: Ticket,
+        source: dict,
+        field: str,
+        expected: Optional[Union[str, Sequence[str]]],
+    ) -> bool:
+        values = self._normalize_expected_values(expected)
+        if not values:
+            return True
+
+        field_value = self.field_extractor.get_field_value(ticket, source, field)
+        if field_value is None:
+            return False
+
+        return any(self._contains(field_value, value) for value in values)
+
     def matches(self, ticket: Ticket, source: dict, payload: TicketSearchRequest) -> bool:
         # Check active fields
         for field in payload.active_fields:
-            expected = payload.field_values.get(field, "").strip()
-            if expected and not self._contains(
-                self.field_extractor.get_field_value(ticket, source, field), expected
+            if field not in payload.field_values:
+                continue
+            if not self._matches_field(
+                ticket, source, field, payload.field_values.get(field)
             ):
                 return False
 
@@ -107,9 +141,7 @@ class TicketSearchMatcher:
         for field, value in payload.field_values.items():
             if field in payload.active_fields:
                 continue
-            if value.strip() and not self._contains(
-                self.field_extractor.get_field_value(ticket, source, field), value.strip()
-            ):
+            if not self._matches_field(ticket, source, field, value):
                 return False
 
         # Check date ranges

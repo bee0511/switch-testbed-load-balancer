@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # 後端 API 服務
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: switch-testbed-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端服務
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: switch-testbed-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+volumes:
+  data:
+  logs:
+
+networks:
+  default:
+    name: switch-testbed-network

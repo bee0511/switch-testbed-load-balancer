@@ -45,8 +45,8 @@ export default function App() {
   const { options: deviceOptions, loading: deviceLoading, error: deviceError } = useDeviceOptions();
   
   // 用於清理 timeout 的 refs
-  const modalTimeoutRef = useRef<number | null>(null);
-  const filterTimeoutRef = useRef<number | null>(null);
+  const modalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 組件卸載時清理所有 timeout
   useEffect(() => {

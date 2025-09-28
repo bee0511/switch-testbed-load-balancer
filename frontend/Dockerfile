@@ -1,0 +1,38 @@
+# 多階段建置：建置階段
+FROM node:18-slim AS builder
+
+# 設定工作目錄
+WORKDIR /app
+
+# 設定 npm 配置以加速安裝
+RUN npm config set registry https://registry.npmmirror.com/ && \
+    npm config set fund false && \
+    npm config set audit false && \
+    npm config set progress false
+
+# 只複製 package 相關檔案以利用 Docker 快取層
+COPY frontend/package.json frontend/package-lock.json* ./
+
+# 安裝依賴 - 包含 dev dependencies 因為建置需要
+RUN npm install --silent --no-optional --no-fund --no-audit
+
+# 複製其餘的前端原始碼
+COPY frontend/ .
+
+# 建置應用程式
+RUN npm run build
+
+# 生產階段：使用 nginx 提供靜態檔案服務
+FROM nginx:alpine
+
+# 複製建置好的檔案到 nginx 目錄
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# 複製 nginx 設定檔案
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+
+# 暴露端口
+EXPOSE 80
+
+# 啟動 nginx
+CMD ["nginx", "-g", "daemon off;"]

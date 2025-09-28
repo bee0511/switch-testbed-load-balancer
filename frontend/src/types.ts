@@ -45,3 +45,28 @@ export interface FilterState {
   resultData: string;
   rawData: string;
 }
+
+export interface DeviceEntryOption {
+  ip: string;
+  port: number;
+  serial_number: string;
+}
+
+export interface VersionOption {
+  version: string;
+  devices: DeviceEntryOption[];
+}
+
+export interface ModelOption {
+  model: string;
+  versions: VersionOption[];
+}
+
+export interface VendorOption {
+  vendor: string;
+  models: ModelOption[];
+}
+
+export interface DeviceConfig {
+  vendors: VendorOption[];
+}

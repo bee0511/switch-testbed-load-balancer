@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FilterPanel } from "./components/FilterPanel";
 import { TicketCard } from "./components/TicketCard";
 import { TicketModal } from "./components/TicketModal";
+import { useDeviceOptions } from "./hooks/useDeviceOptions";
 import { useTickets } from "./hooks/useTickets";
 import type { FilterState, Ticket } from "./types";
 import "./App.css";
@@ -35,21 +36,52 @@ export default function App() {
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters);
   const { tickets, loading, error } = useTickets(appliedFilters);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const { options: deviceOptions, loading: deviceLoading, error: deviceError } = useDeviceOptions();
 
   const submitFilters = () => {
     setAppliedFilters(cloneFilters(pendingFilters));
+    setMenuOpen(false);
   };
 
-  return (
-    <div className="layout">
-      <FilterPanel
-        filters={pendingFilters}
-        onChange={setPendingFilters}
-        onSubmit={submitFilters}
-        submitting={loading}
-      />
+  const activeFilterCount = useMemo(() => {
+    const fieldCount = pendingFilters.activeFields.length;
+    const dateCount = Object.values(pendingFilters.dateRanges).filter(
+      (range) => range.from || range.to
+    ).length;
+    const textCount = [pendingFilters.resultData, pendingFilters.rawData].filter((value) =>
+      value.trim()
+    ).length;
+    return fieldCount + dateCount + textCount;
+  }, [pendingFilters]);
 
-      <section className="results">
+  return (
+    <div className="app-shell">
+      <header className="top-bar">
+        <button
+          type="button"
+          className="menu-button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="開啟篩選條件"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <div className="brand">
+          <h1>Switch Ticket Explorer</h1>
+          <p>以台積電風格重新設計的搜尋控制台</p>
+        </div>
+        <div className="filter-status">
+          <span className="status-label">篩選條件</span>
+          <span className="status-count">{activeFilterCount}</span>
+          <button type="button" onClick={submitFilters} disabled={loading}>
+            {loading ? "搜尋中..." : "立即搜尋"}
+          </button>
+        </div>
+      </header>
+
+      <main className="results">
         <header className="results__header">
           <div>
             <h2>搜尋結果</h2>
@@ -69,7 +101,19 @@ export default function App() {
             <TicketCard key={ticket.id} ticket={ticket} onClick={setSelectedTicket} />
           ))}
         </div>
-      </section>
+      </main>
+
+      <FilterPanel
+        filters={pendingFilters}
+        onChange={setPendingFilters}
+        onSubmit={submitFilters}
+        submitting={loading}
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        deviceConfig={deviceOptions}
+        deviceLoading={deviceLoading}
+        deviceError={deviceError}
+      />
 
       <TicketModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
     </div>

@@ -5,6 +5,7 @@ import "./TicketModal.css";
 interface TicketModalProps {
   ticket: Ticket | null;
   onClose: () => void;
+  isClosing?: boolean;
 }
 
 type TabKey = "result" | "raw";
@@ -14,7 +15,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   raw: "Switch Config"
 };
 
-export function TicketModal({ ticket, onClose }: TicketModalProps) {
+export function TicketModal({ ticket, onClose, isClosing }: TicketModalProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("result");
 
   useEffect(() => {
@@ -38,8 +39,8 @@ export function TicketModal({ ticket, onClose }: TicketModalProps) {
   const content = activeTab === "result" ? ticket.result_data : ticket.raw_data;
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+    <div className={`modal-backdrop ${isClosing ? 'closing' : ''}`} onClick={onClose}>
+      <div className={`modal ${isClosing ? 'closing' : ''}`} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
         <header className="modal__header">
           <div>
             <span className="modal__status">{ticket.status}</span>
@@ -49,7 +50,7 @@ export function TicketModal({ ticket, onClose }: TicketModalProps) {
             ×
           </button>
         </header>
-        <nav className="modal__tabs">
+        <nav className={`modal__tabs ${activeTab === "raw" ? "tab-1" : ""}`}>
           {(Object.keys(TAB_LABELS) as TabKey[]).map((key) => (
             <button
               key={key}

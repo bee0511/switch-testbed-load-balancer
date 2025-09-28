@@ -8,7 +8,7 @@
 
 .top-bar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 1.5rem;
   padding: 1.5rem clamp(1.5rem, 4vw, 3rem);
@@ -20,52 +20,37 @@
   z-index: 10;
 }
 
-.menu-button {
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.3rem;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(230, 0, 18, 0.85);
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.menu-button span {
-  display: block;
-  height: 3px;
-  background: #f7f8fb;
-  border-radius: 999px;
-  margin: 0 0.75rem;
-}
-
-.menu-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(230, 0, 18, 0.4);
-}
-
-.brand h1 {
-  margin: 0;
-  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
-  letter-spacing: 0.05em;
-}
-
-.brand p {
-  margin: 0.25rem 0 0;
-  color: rgba(247, 248, 251, 0.75);
-}
-
 .filter-status {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
   padding: 0.75rem 1.2rem;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: inherit;
+  font-family: inherit;
+  position: relative;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.filter-status:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(192, 192, 192, 0.5);
+  box-shadow: 
+    0 8px 25px rgba(192, 192, 192, 0.25),
+    0 4px 15px rgba(255, 255, 255, 0.1),
+    0 0 20px rgba(192, 192, 192, 0.3),
+    0 0 40px rgba(192, 192, 192, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
 .status-label {
@@ -80,22 +65,65 @@
   height: 2.1rem;
   display: grid;
   place-items: center;
-  background: #f7f8fb;
+  background: linear-gradient(145deg, #f7f8fb, #e5e7eb);
   color: #1a1c2d;
   font-weight: 700;
   border-radius: 999px;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.filter-status button {
+.filter-status:hover .status-count {
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  box-shadow: 
+    0 3px 12px rgba(192, 192, 192, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    0 0 8px rgba(192, 192, 192, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+  letter-spacing: 0.05em;
+}
+
+.brand p {
+  margin: 0.25rem 0 0;
+  color: rgba(247, 248, 251, 0.75);
+}
+
+.search-actions button {
   border: 0;
   border-radius: 999px;
   background: linear-gradient(135deg, #ff4f5a, #e60012);
   color: #fff;
   font-weight: 700;
+  font-size: 1rem;
   letter-spacing: 0.05em;
-  padding: 0.6rem 1.6rem;
+  padding: 0.9rem 2.2rem;
   cursor: pointer;
   box-shadow: 0 12px 26px rgba(230, 0, 18, 0.4);
+  transition: all 0.2s ease;
+  min-width: 140px;
+  height: 50px;
+}
+
+.search-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(230, 0, 18, 0.5);
+}
+
+.search-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .filter-status button:disabled {
@@ -133,7 +161,31 @@
 .card-grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  max-width: 100%;
+}
+
+/* 當螢幕寬度足夠時，限制每行最多 5 個 ticket */
+@media (min-width: 1600px) {
+  .card-grid {
+    grid-template-columns: repeat(5, minmax(280px, 320px));
+    justify-content: start;
+  }
+}
+
+/* 中等螢幕調整 */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 300px));
+  }
+}
+
+/* 小螢幕調整 */
+@media (max-width: 768px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
 }
 
 .alert {
@@ -168,11 +220,11 @@
     text-align: center;
   }
 
-  .menu-button {
-    justify-self: center;
-  }
-
   .filter-status {
     justify-content: center;
+  }
+
+  .search-actions {
+    justify-self: center;
   }
 }

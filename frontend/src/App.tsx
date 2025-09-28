@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { FilterPanel } from "./components/FilterPanel";
 import { TicketCard } from "./components/TicketCard";
 import { TicketModal } from "./components/TicketModal";
@@ -6,6 +6,9 @@ import { useDeviceOptions } from "./hooks/useDeviceOptions";
 import { useTickets } from "./hooks/useTickets";
 import type { FilterState, Ticket } from "./types";
 import "./App.css";
+
+// 動畫持續時間常數，確保 JS 和 CSS 同步
+const ANIMATION_DURATION = 300;
 
 const initialFilters: FilterState = {
   activeFields: [],
@@ -37,11 +40,86 @@ export default function App() {
   const { tickets, loading, error } = useTickets(appliedFilters);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const [isClosingModal, setIsClosingModal] = useState<boolean>(false);
+  const [isClosingFilter, setIsClosingFilter] = useState<boolean>(false);
   const { options: deviceOptions, loading: deviceLoading, error: deviceError } = useDeviceOptions();
+  
+  // 用於清理 timeout 的 refs
+  const modalTimeoutRef = useRef<number | null>(null);
+  const filterTimeoutRef = useRef<number | null>(null);
+
+  // 組件卸載時清理所有 timeout
+  useEffect(() => {
+    return () => {
+      if (modalTimeoutRef.current) {
+        clearTimeout(modalTimeoutRef.current);
+      }
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const submitFilters = () => {
     setAppliedFilters(cloneFilters(pendingFilters));
-    setMenuOpen(false);
+    handleCloseFilter();
+  };
+
+  const clearFilters = () => {
+    setPendingFilters(cloneFilters(initialFilters));
+    setAppliedFilters(cloneFilters(initialFilters));
+  };
+
+  const handleCloseModal = () => {
+    if (isClosingModal) return; // 防止重複觸發
+    
+    // 清理之前的 timeout
+    if (modalTimeoutRef.current) {
+      clearTimeout(modalTimeoutRef.current);
+    }
+    
+    setIsClosingModal(true);
+    modalTimeoutRef.current = setTimeout(() => {
+      setSelectedTicket(null);
+      setIsClosingModal(false);
+      modalTimeoutRef.current = null;
+    }, ANIMATION_DURATION);
+  };
+
+  const handleCloseFilter = () => {
+    if (isClosingFilter) return; // 防止重複觸發
+    
+    // 清理之前的 timeout
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+    }
+    
+    setIsClosingFilter(true);
+    filterTimeoutRef.current = setTimeout(() => {
+      setMenuOpen(false);
+      setIsClosingFilter(false);
+      filterTimeoutRef.current = null;
+    }, ANIMATION_DURATION);
+  };
+
+  const handleSelectTicket = (ticket: Ticket) => {
+    // 如果正在關閉模態，先清理狀態
+    if (isClosingModal && modalTimeoutRef.current) {
+      clearTimeout(modalTimeoutRef.current);
+      setIsClosingModal(false);
+      modalTimeoutRef.current = null;
+    }
+    setSelectedTicket(ticket);
+  };
+
+  const handleOpenFilter = () => {
+    // 如果正在關閉篩選面板，先清理狀態
+    if (isClosingFilter && filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current);
+      setIsClosingFilter(false);
+      filterTimeoutRef.current = null;
+    }
+    setMenuOpen(true);
   };
 
   const activeFilterCount = useMemo(() => {
@@ -58,23 +136,19 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="top-bar">
-        <button
+        <div className="brand">
+          <h1>Testbed Ticket Explorer</h1>
+        </div>
+        <button 
           type="button"
-          className="menu-button"
-          onClick={() => setMenuOpen(true)}
+          className="filter-status"
+          onClick={handleOpenFilter}
           aria-label="開啟篩選條件"
         >
-          <span />
-          <span />
-          <span />
-        </button>
-        <div className="brand">
-          <h1>Switch Ticket Explorer</h1>
-          <p>以台積電風格重新設計的搜尋控制台</p>
-        </div>
-        <div className="filter-status">
           <span className="status-label">篩選條件</span>
           <span className="status-count">{activeFilterCount}</span>
+        </button>
+        <div className="search-actions">
           <button type="button" onClick={submitFilters} disabled={loading}>
             {loading ? "搜尋中..." : "立即搜尋"}
           </button>
@@ -98,7 +172,7 @@ export default function App() {
 
         <div className="card-grid">
           {tickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} onClick={setSelectedTicket} />
+            <TicketCard key={ticket.id} ticket={ticket} onClick={handleSelectTicket} />
           ))}
         </div>
       </main>
@@ -107,15 +181,21 @@ export default function App() {
         filters={pendingFilters}
         onChange={setPendingFilters}
         onSubmit={submitFilters}
+        onClear={clearFilters}
         submitting={loading}
         isOpen={menuOpen}
-        onClose={() => setMenuOpen(false)}
+        onClose={handleCloseFilter}
+        isClosing={isClosingFilter}
         deviceConfig={deviceOptions}
         deviceLoading={deviceLoading}
         deviceError={deviceError}
       />
 
-      <TicketModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+      <TicketModal 
+        ticket={selectedTicket} 
+        onClose={handleCloseModal}
+        isClosing={isClosingModal}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 .ticket-card {
-  background: var(--surface);
-  color: var(--ink);
+  background: #ffffff;
+  color: #6b7280;
   border-radius: 24px;
   padding: 1.75rem;
   display: grid;
@@ -8,6 +8,12 @@
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   box-shadow: 0 12px 30px rgba(18, 28, 43, 0.1);
+  width: 100%;
+  max-width: 320px;
+  min-width: 280px;
+  height: fit-content;
+  overflow: hidden; /* 防止內容超出卡片 */
+  min-width: 0; /* 允許內容收縮 */
 }
 
 .ticket-card:focus,
@@ -26,7 +32,7 @@
   font-size: 1.05rem;
   margin: 0;
   word-break: break-all;
-  color: var(--ink-strong);
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
 }
 
 .status {
@@ -38,7 +44,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   background: rgba(0, 0, 0, 0.08);
-  color: var(--ink-strong);
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
 }
 
 .status--completed {
@@ -53,27 +59,72 @@
 
 .status--failed {
   background: rgba(239, 51, 64, 0.15);
-  color: var(--tsmc-red);
+  color: #e60012;  /* 替換 var(--tsmc-red) */
 }
 
 .ticket-card__grid {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-areas: 
+    "vendor model version"
+    "enqueued enqueued enqueued"
+    "started started started"
+    "completed completed completed";
   margin: 0;
+}
+
+.ticket-card__grid .vendor {
+  grid-area: vendor;
+}
+
+.ticket-card__grid .model {
+  grid-area: model;
+}
+
+.ticket-card__grid .version {
+  grid-area: version;
+}
+
+.ticket-card__grid .enqueued {
+  grid-area: enqueued;
+}
+
+.ticket-card__grid .started {
+  grid-area: started;
+}
+
+.ticket-card__grid .completed {
+  grid-area: completed;
+}
+
+/* 防止內容超出卡片範圍 */
+.ticket-card__grid > div {
+  min-width: 0; /* 允許 flex/grid 項目收縮到最小 */
+  overflow: hidden;
 }
 
 .ticket-card__grid dt {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-muted);
+  color: #9ca3af;  /* 替換 var(--ink-muted) */
+}
+
+.ticket-card__grid dd {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #000000;  /* 替換 var(--ink-base) */
+  margin: 0.25rem 0 0;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .ticket-card__grid dd {
   margin: 0.2rem 0 0;
   font-weight: 600;
-  color: var(--ink-strong);
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
 }
 
 .machine {
@@ -84,22 +135,30 @@
 .machine h4 {
   margin: 0 0 0.75rem;
   font-size: 0.9rem;
-  color: var(--ink-strong);
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
 }
 
 .machine__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.machine__grid .machine__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .machine__grid .label {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-muted);
+  color: #9ca3af;  /* 保持標籤為灰色 */
 }
 
-.machine__grid span:last-child {
+.machine__grid .value {
   font-weight: 600;
+  color: #1a1c2d;  /* 改為黑色 */
+  word-break: break-all;
 }

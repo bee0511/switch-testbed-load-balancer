@@ -5,10 +5,16 @@ import "./FilterPanel.css";
 
 const TEXT_FIELDS: { key: FilterField; label: string; placeholder: string }[] = [
   { key: "id", label: "Ticket ID", placeholder: "輸入 ticket ID" },
-  { key: "status", label: "狀態", placeholder: "輸入狀態 (例如 queued)" },
 ];
 
-const DEVICE_FIELDS: FilterField[] = [
+const STATUS_OPTIONS = [
+  { value: "queued", label: "queued" },
+  { value: "running", label: "running" },
+  { value: "completed", label: "completed" },
+  { value: "failed", label: "failed" },
+];
+
+const DEVICE_FIELDS: (keyof DeviceSelections)[] = [
   "vendor",
   "model",
   "version",
@@ -21,9 +27,11 @@ interface FilterPanelProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
   onSubmit: () => void;
+  onClear: () => void;
   submitting?: boolean;
   isOpen: boolean;
   onClose: () => void;
+  isClosing?: boolean;
   deviceConfig: DeviceConfig | null;
   deviceLoading: boolean;
   deviceError: string | null;
@@ -158,7 +166,9 @@ function applyDeviceSelections(
   selections: DeviceSelections
 ) {
   const nextFieldValues: FilterState["fieldValues"] = { ...filters.fieldValues };
-  let nextActiveFields = filters.activeFields.filter((field) => !DEVICE_FIELDS.includes(field));
+  let nextActiveFields = filters.activeFields.filter((field) => 
+    !(DEVICE_FIELDS as readonly string[]).includes(field)
+  );
 
   DEVICE_FIELDS.forEach((field) => {
     const values = selections[field];
@@ -204,9 +214,11 @@ export function FilterPanel({
   filters,
   onChange,
   onSubmit,
+  onClear,
   submitting = false,
   isOpen,
   onClose,
+  isClosing = false,
   deviceConfig,
   deviceLoading,
   deviceError,
@@ -332,7 +344,34 @@ export function FilterPanel({
     });
   };
 
-  const toggleDeviceValue = (field: FilterField, value: string) => {
+  const toggleStatusValue = (status: string) => {
+    const currentStatusValues = parseSelections(filters.fieldValues.status);
+    const nextValues = { ...filters.fieldValues };
+    let nextActive = filters.activeFields;
+
+    const exists = currentStatusValues.includes(status);
+    const nextStatusValues = exists
+      ? currentStatusValues.filter((item) => item !== status)
+      : [...currentStatusValues, status];
+
+    if (nextStatusValues.length > 0) {
+      nextValues.status = nextStatusValues.join(",");
+      if (!nextActive.includes("status")) {
+        nextActive = [...nextActive, "status"];
+      }
+    } else {
+      delete nextValues.status;
+      nextActive = nextActive.filter((field) => field !== "status");
+    }
+
+    onChange({
+      ...filters,
+      activeFields: nextActive,
+      fieldValues: nextValues,
+    });
+  };
+
+  const toggleDeviceValue = (field: keyof DeviceSelections, value: string) => {
     const currentValues = selections[field].slice();
     const exists = currentValues.includes(value);
     const nextValues = exists
@@ -346,64 +385,42 @@ export function FilterPanel({
   };
 
   const handleVendorToggle = (vendor: string) => {
-    const nextVendors = selections.vendor.includes(vendor)
-      ? selections.vendor.filter((item) => item !== vendor)
-      : [...selections.vendor, vendor];
+    // 單選模式：如果點擊的是已選中的廠商，則取消選擇；否則只選擇這個廠商
+    const nextVendors = selections.vendor.includes(vendor) ? [] : [vendor];
 
     const modelsAfterVendor = collectModelOptions(deviceConfig, nextVendors).map((model) => model.name);
-    const sanitizedModels = selections.model.filter((model) => modelsAfterVendor.includes(model));
-    const versionsAfterVendor = collectVersionOptions(deviceConfig, nextVendors, sanitizedModels).map(
-      (version) => version.name
-    );
-    const sanitizedVersions = selections.version.filter((version) => versionsAfterVendor.includes(version));
-    const devicesAfterVendor = collectDeviceDetailOptions(
-      deviceConfig,
-      nextVendors,
-      sanitizedModels,
-      sanitizedVersions
-    );
+    // 清空不相關的選擇
+    const sanitizedModels: string[] = [];
+    const versionsAfterVendor: string[] = [];
+    const sanitizedVersions: string[] = [];
 
     updateSelections({
       vendor: nextVendors,
       model: sanitizedModels,
       version: sanitizedVersions,
-      "machine.ip": selections["machine.ip"].filter((ip) => devicesAfterVendor.some((d) => d.ip === ip)),
-      "machine.serial": selections["machine.serial"].filter((serial) =>
-        devicesAfterVendor.some((d) => d.serial === serial)
-      ),
-      "machine.port": selections["machine.port"].filter((port) =>
-        devicesAfterVendor.some((d) => String(d.port) === port)
-      ),
+      "machine.ip": [],
+      "machine.serial": [],
+      "machine.port": [],
     });
   };
 
   const handleModelToggle = (model: string) => {
-    const nextModels = selections.model.includes(model)
-      ? selections.model.filter((item) => item !== model)
-      : [...selections.model, model];
+    // 單選模式：如果點擊的是已選中的型號，則取消選擇；否則只選擇這個型號
+    const nextModels = selections.model.includes(model) ? [] : [model];
 
     const versionsAfterModel = collectVersionOptions(deviceConfig, selections.vendor, nextModels).map(
       (version) => version.name
     );
-    const sanitizedVersions = selections.version.filter((version) => versionsAfterModel.includes(version));
-    const devicesAfterModel = collectDeviceDetailOptions(
-      deviceConfig,
-      selections.vendor,
-      nextModels,
-      sanitizedVersions
-    );
+    // 清空不相關的選擇
+    const sanitizedVersions: string[] = [];
 
     updateSelections({
       vendor: selections.vendor,
       model: nextModels,
       version: sanitizedVersions,
-      "machine.ip": selections["machine.ip"].filter((ip) => devicesAfterModel.some((d) => d.ip === ip)),
-      "machine.serial": selections["machine.serial"].filter((serial) =>
-        devicesAfterModel.some((d) => d.serial === serial)
-      ),
-      "machine.port": selections["machine.port"].filter((port) =>
-        devicesAfterModel.some((d) => String(d.port) === port)
-      ),
+      "machine.ip": [],
+      "machine.serial": [],
+      "machine.port": [],
     });
   };
 
@@ -458,7 +475,7 @@ export function FilterPanel({
         <div className="option-group">
           <p className="option-group__title">型號 (Model)</p>
           {selections.vendor.length === 0 && (
-            <p className="option-hint">請先選擇至少一個廠商。</p>
+            <p className="option-hint">請先選擇一個廠商。</p>
           )}
           <div className="option-grid" aria-disabled={selections.vendor.length === 0}>
             {modelOptions.map((model) => (
@@ -478,7 +495,7 @@ export function FilterPanel({
         <div className="option-group">
           <p className="option-group__title">版本 (Version)</p>
           {selections.model.length === 0 && (
-            <p className="option-hint">請先選擇至少一個型號。</p>
+            <p className="option-hint">請先選擇一個型號。</p>
           )}
           <div className="option-grid" aria-disabled={selections.model.length === 0}>
             {versionOptions.map((version) => (
@@ -568,6 +585,25 @@ export function FilterPanel({
           />
         </label>
       ))}
+      
+      <div className="option-group">
+        <p className="option-group__title">狀態 (Status)</p>
+        <div className="option-grid">
+          {STATUS_OPTIONS.map((option) => {
+            const selectedStatuses = parseSelections(filters.fieldValues.status);
+            return (
+              <label key={option.value} className="option-chip">
+                <input
+                  type="checkbox"
+                  checked={selectedStatuses.includes(option.value)}
+                  onChange={() => toggleStatusValue(option.value)}
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 
@@ -585,12 +621,14 @@ export function FilterPanel({
               type="datetime-local"
               value={filters.dateRanges[field].from ?? ""}
               onChange={(event) => updateDate(field, "from", event.target.value)}
+              placeholder="開始時間"
             />
             <span className="delimiter">至</span>
             <input
               type="datetime-local"
               value={filters.dateRanges[field].to ?? ""}
               onChange={(event) => updateDate(field, "to", event.target.value)}
+              placeholder="結束時間"
             />
           </div>
           {dateErrors[field] && <p className="error-text">{dateErrors[field]}</p>}
@@ -618,13 +656,12 @@ export function FilterPanel({
   }
 
   return (
-    <div className="filter-menu" role="dialog" aria-modal="true">
-      <div className="filter-menu__backdrop" onClick={onClose} aria-hidden="true" />
-      <div className="filter-menu__container">
+    <div className={`filter-menu ${isClosing ? 'closing' : ''}`} role="dialog" aria-modal="true">
+      <div className={`filter-menu__backdrop ${isClosing ? 'closing' : ''}`} onClick={onClose} aria-hidden="true" />
+      <div className={`filter-menu__container ${isClosing ? 'closing' : ''}`}>
         <header className="filter-menu__header">
           <div>
             <h1>Switch Ticket Explorer</h1>
-            <p>利用多層篩選器快速鎖定需要的 ticket。</p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="關閉篩選選單">
             ×
@@ -641,13 +678,11 @@ export function FilterPanel({
               <span>設備條件</span>
               <span className="section-toggle__icon" aria-hidden="true" />
             </button>
-            {openSections.includes("device") && (
-              <div className="section-panel">
-                {deviceLoading && <p className="option-hint">載入設備資料中...</p>}
-                {deviceError && <p className="error-text">{deviceError}</p>}
-                {!deviceLoading && !deviceError && renderDeviceOptions()}
-              </div>
-            )}
+            <div className={`section-panel ${openSections.includes("device") ? "open" : ""}`}>
+              {deviceLoading && <p className="option-hint">載入設備資料中...</p>}
+              {deviceError && <p className="error-text">{deviceError}</p>}
+              {!deviceLoading && !deviceError && renderDeviceOptions()}
+            </div>
           </div>
 
           <div className="filter-section">
@@ -659,7 +694,9 @@ export function FilterPanel({
               <span>欄位搜尋</span>
               <span className="section-toggle__icon" aria-hidden="true" />
             </button>
-            {openSections.includes("fields") && <div className="section-panel">{renderTextFieldOptions()}</div>}
+            <div className={`section-panel ${openSections.includes("fields") ? "open" : ""}`}>
+              {renderTextFieldOptions()}
+            </div>
           </div>
 
           <div className="filter-section">
@@ -671,7 +708,9 @@ export function FilterPanel({
               <span>時間範圍</span>
               <span className="section-toggle__icon" aria-hidden="true" />
             </button>
-            {openSections.includes("dates") && <div className="section-panel">{renderDateOptions()}</div>}
+            <div className={`section-panel ${openSections.includes("dates") ? "open" : ""}`}>
+              {renderDateOptions()}
+            </div>
           </div>
 
           <div className="filter-section">
@@ -683,13 +722,16 @@ export function FilterPanel({
               <span>進階內容</span>
               <span className="section-toggle__icon" aria-hidden="true" />
             </button>
-            {openSections.includes("advanced") && (
-              <div className="section-panel">{renderAdvancedOptions()}</div>
-            )}
+            <div className={`section-panel ${openSections.includes("advanced") ? "open" : ""}`}>
+              {renderAdvancedOptions()}
+            </div>
           </div>
         </div>
 
         <footer className="filter-menu__footer">
+          <button type="button" className="clear-button" onClick={onClear}>
+            清空篩選
+          </button>
           <button type="button" onClick={onSubmit} disabled={submitting}>
             {submitting ? "搜尋中..." : "套用條件"}
           </button>

@@ -34,3 +34,17 @@ make run
    ```
 
    預設於 http://localhost:5173 執行。
+
+## Docker Images
+
+- Docker Hub: [backend](https://hub.docker.com/r/bee000092/switch-testbed-backend), [frontend](https://hub.docker.com/r/bee000092/switch-testbed-frontend)
+
+- Pull:
+  ```bash
+  docker pull bee000092/switch-testbed-backend:latest
+  docker pull bee000092/switch-testbed-frontend:latest
+  ```
+- Start application:
+   ```bash
+   docker-compose up -d
+   ```

@@ -13,9 +13,10 @@ RUN npm config set registry https://registry.npmmirror.com/ && \
 # 只複製 package 相關檔案以利用 Docker 快取層
 COPY frontend/package.json frontend/package-lock.json* ./
 
-# 安裝依賴 - 包含 dev dependencies 因為建置需要
-RUN npm install --silent --no-optional --no-fund --no-audit
-
+RUN npm cache clean --force && \
+    rm -rf node_modules package-lock.json && \
+    npm install --silent --no-fund --no-audit
+    
 # 複製其餘的前端原始碼
 COPY frontend/ .
 

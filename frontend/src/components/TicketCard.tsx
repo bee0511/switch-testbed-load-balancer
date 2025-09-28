@@ -28,27 +28,27 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
         <h3>{ticket.id}</h3>
       </header>
       <dl className="ticket-card__grid">
-        <div>
+        <div className="vendor">
           <dt>廠商</dt>
           <dd>{ticket.vendor}</dd>
         </div>
-        <div>
+        <div className="model">
           <dt>型號</dt>
           <dd>{ticket.model}</dd>
         </div>
-        <div>
+        <div className="version">
           <dt>版本</dt>
           <dd>{ticket.version}</dd>
         </div>
-        <div>
+        <div className="enqueued">
           <dt>排入佇列</dt>
           <dd>{ticket.enqueued_at || "-"}</dd>
         </div>
-        <div>
+        <div className="started">
           <dt>開始時間</dt>
           <dd>{ticket.started_at || "-"}</dd>
         </div>
-        <div>
+        <div className="completed">
           <dt>完成時間</dt>
           <dd>{ticket.completed_at || "-"}</dd>
         </div>
@@ -57,17 +57,17 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
         <section className="machine">
           <h4>執行機器</h4>
           <div className="machine__grid">
-            <div>
+            <div className="machine__item">
               <span className="label">Serial</span>
-              <span>{ticket.machine.serial}</span>
+              <span className="value">{ticket.machine.serial}</span>
             </div>
-            <div>
+            <div className="machine__item">
               <span className="label">IP</span>
-              <span>{ticket.machine.ip}</span>
+              <span className="value">{ticket.machine.ip}</span>
             </div>
-            <div>
+            <div className="machine__item">
               <span className="label">Port</span>
-              <span>{ticket.machine.port}</span>
+              <span className="value">{ticket.machine.port}</span>
             </div>
           </div>
         </section>

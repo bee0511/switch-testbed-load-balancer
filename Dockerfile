@@ -16,7 +16,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 複製應用程式程式碼
 COPY app/ ./app/
 COPY config.yaml device.yaml ./
-COPY cfg/ ./cfg/
 
 # 創建必要的目錄
 RUN mkdir -p data/tickets/active data/tickets/archive logs

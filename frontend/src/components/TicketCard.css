@@ -126,39 +126,3 @@
   font-weight: 600;
   color: #1a1c2d;  /* 替換 var(--ink-strong) */
 }
-
-.machine {
-  border-top: 1px solid rgba(12, 26, 38, 0.08);
-  padding-top: 1rem;
-}
-
-.machine h4 {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
-  color: #1a1c2d;  /* 替換 var(--ink-strong) */
-}
-
-.machine__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.machine__grid .machine__item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.machine__grid .label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #9ca3af;  /* 保持標籤為灰色 */
-}
-
-.machine__grid .value {
-  font-weight: 600;
-  color: #1a1c2d;  /* 改為黑色 */
-  word-break: break-all;
-}

@@ -53,25 +53,6 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
           <dd>{ticket.completed_at || "-"}</dd>
         </div>
       </dl>
-      {ticket.machine && (
-        <section className="machine">
-          <h4>執行機器</h4>
-          <div className="machine__grid">
-            <div className="machine__item">
-              <span className="label">Serial</span>
-              <span className="value">{ticket.machine.serial}</span>
-            </div>
-            <div className="machine__item">
-              <span className="label">IP</span>
-              <span className="value">{ticket.machine.ip}</span>
-            </div>
-            <div className="machine__item">
-              <span className="label">Port</span>
-              <span className="value">{ticket.machine.port}</span>
-            </div>
-          </div>
-        </section>
-      )}
     </article>
   );
 }

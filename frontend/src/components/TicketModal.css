@@ -82,10 +82,12 @@
 }
 
 .modal__tabs {
+  --tab-gap: 0.35rem;
   display: grid;
   grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   background: #f3f4f6;  /* 替換 var(--surface-muted) */
-  gap: 0.35rem;
+  gap: var(--tab-gap);
   padding: 0.75rem;
   position: relative;
   overflow: hidden;
@@ -97,18 +99,38 @@
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
-  width: calc(50% - 0.175rem); /* 假設有兩個標籤，每個佔50% */
+  width: calc(100% - 1.5rem); /* 預設單標籤時覆蓋整個寬度 */
   height: calc(100% - 1.5rem);
   background: linear-gradient(135deg, #e60012, #ff745d);
   border-radius: 14px;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
   box-shadow: 0 6px 20px rgba(230, 0, 18, 0.3);
+  pointer-events: none;
 }
 
-/* 當第二個標籤激活時，滑動到右側 */
-.modal__tabs.tab-1::before {
-  transform: translateX(calc(100% + 0.35rem));
+.modal__tabs.tab-count-2::before {
+  width: calc((100% - var(--tab-gap) - 1.5rem) / 2);
+}
+
+.modal__tabs.tab-count-3::before {
+  width: calc((100% - (2 * var(--tab-gap)) - 1.5rem) / 3);
+}
+
+.modal__tabs.tab-active-0::before {
+  transform: translateX(0);
+}
+
+.modal__tabs.tab-active-1::before {
+  transform: translateX(calc(100% + var(--tab-gap)));
+}
+
+.modal__tabs.tab-active-2::before {
+  transform: translateX(calc(2 * (100% + var(--tab-gap))));
+}
+
+.modal__tabs.tab-active-3::before {
+  transform: translateX(calc(3 * (100% + var(--tab-gap))));
 }
 
 .modal__tabs button {
@@ -138,6 +160,26 @@
   min-height: 0; /* 允許內容收縮 */
 }
 
+.text-tab__content {
+  position: relative;
+}
+
+.text-tab__content pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  background: #f3f4f6;  /* 替換 var(--surface-muted) */
+  padding: 1.5rem;
+  border-radius: 18px;
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
+  overflow: auto;
+}
+
+.modal__content {
+  position: relative;
+}
+
 .modal__content pre {
   white-space: pre-wrap;
   word-break: break-word;
@@ -147,9 +189,9 @@
   padding: 1.5rem;
   border-radius: 18px;
   color: #1a1c2d;  /* 替換 var(--ink-strong) */
-  min-height: min(56vh, 480px); /* 使用 min-height 而不是 max-height */
-  height: min(56vh, 480px); /* 設定固定高度 */
   overflow: auto;
+  min-height: min(56vh, 480px);
+  max-height: min(56vh, 480px);
 }
 
 .modal__content .empty {
@@ -166,6 +208,99 @@
   padding: 1.5rem;
 }
 
+.machine-info {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f3f4f6;  /* 替換 var(--surface-muted) */
+  border-radius: 18px;
+  min-height: min(56vh, 480px);
+  height: min(56vh, 480px);
+  overflow: auto;
+}
+
+.machine-info__row {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  background: #ffffff;  /* 替換 var(--surface) */
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.machine-info__row .label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;  /* 替換 var(--ink) */
+}
+
+.machine-info__row .value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1c2d;  /* 替換 var(--ink-strong) */
+  word-break: break-all;
+}
+
+.copy-button {
+  border: none;
+  border-radius: 12px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: #1e3a8a;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  min-width: 72px;
+}
+
+.copy-button--floating {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+}
+
+.copy-button:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.copy-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.copy-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+  background: #cbd5f5;
+  color: #4b5563;
+  transform: none;
+}
+
+.copy-button:focus-visible {
+  outline: 2px solid rgba(29, 78, 216, 0.55);
+  outline-offset: 2px;
+}
+
+.machine-info__row .copy-button {
+  justify-self: end;
+}
+
+.machine-info__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;  /* 替換 var(--ink) */
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
   .modal {
     border-radius: 18px;
@@ -177,7 +312,16 @@
   }
 
   .modal__tabs {
-    grid-auto-flow: row;
+    overflow-x: auto;
+  }
+
+  .machine-info__row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .machine-info__row .copy-button {
+    justify-self: stretch;
   }
 }
 

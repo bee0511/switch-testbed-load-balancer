@@ -82,27 +82,19 @@ class TicketSearchMatcher:
         self.field_config = field_config
     
     def _contains(self, value: Optional[str], expected: Optional[str]) -> bool:
-        if not expected:
-            return True
-        if not value:
-            return False
-        return expected.lower() in value.lower()
-
-    def _matches_status_list(self, value: Optional[str], expected: Optional[str]) -> bool:
-        """處理狀態多選邏輯"""
+        """處理欄位值匹配邏輯，支援多選"""
         if not expected:
             return True
         if not value:
             return False
         
-        # 如果 expected 包含逗號，表示是多選狀態
         if ',' in expected:
-            expected_statuses = [status.strip().lower() for status in expected.split(',')]
-            return value.lower() in expected_statuses
+            expected_values = [val.strip().lower() for val in expected.split(',') if val.strip()]
+            value_lower = value.lower()
+            return any(expected_val in value_lower for expected_val in expected_values)
         else:
-            # 單選狀態，使用原來的包含邏輯
             return expected.lower() in value.lower()
-    
+
     def _normalize_search_term(self, value: Optional[str]) -> Optional[str]:
         if value is None:
             return None
@@ -115,13 +107,8 @@ class TicketSearchMatcher:
             expected = payload.field_values.get(field, "").strip()
             ticket_field_value = self.field_extractor.get_field_value(ticket, source, field)
             
-            # 對 status 欄位使用特殊的多選邏輯
-            if field == "status":
-                if expected and not self._matches_status_list(ticket_field_value, expected):
-                    return False
-            else:
-                if expected and not self._contains(ticket_field_value, expected):
-                    return False
+            if expected and not self._contains(ticket_field_value, expected):
+                return False
 
         # Check other field values
         for field, value in payload.field_values.items():
@@ -129,13 +116,8 @@ class TicketSearchMatcher:
                 continue
             ticket_field_value = self.field_extractor.get_field_value(ticket, source, field)
             
-            # 對 status 欄位使用特殊的多選邏輯
-            if field == "status":
-                if value.strip() and not self._matches_status_list(ticket_field_value, value.strip()):
-                    return False
-            else:
-                if value.strip() and not self._contains(ticket_field_value, value.strip()):
-                    return False
+            if value.strip() and not self._contains(ticket_field_value, value.strip()):
+                return False
 
         # Check date ranges
         for field_name, date_range in payload.date_ranges.items():

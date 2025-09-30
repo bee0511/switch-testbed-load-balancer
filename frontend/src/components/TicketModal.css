@@ -11,6 +11,7 @@
 
 .modal-backdrop.closing {
   animation: modalBackdropOut 0.3s ease-in;
+  animation-fill-mode: forwards;
 }
 
 .modal {
@@ -27,6 +28,7 @@
 
 .modal.closing {
   animation: modalSlideOutScale 0.3s ease-in;
+  animation-fill-mode: forwards;
 }
 
 .modal__header {
@@ -374,11 +376,6 @@
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
-}
-
-/* 關閉動畫 */
-.modal-backdrop.closing {
-  animation: modalBackdropOut 0.3s ease-in;
 }
 
 /* 背景淡出動畫 */

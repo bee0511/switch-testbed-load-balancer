@@ -37,7 +37,7 @@ interface FilterPanelProps {
   deviceError: string | null;
 }
 
-type SectionId = "device" | "fields" | "dates" | "advanced";
+type SectionId = "device" | "dates" | "advanced";
 
 type DeviceSelections = {
   vendor: string[];
@@ -669,6 +669,15 @@ export function FilterPanel({
         </header>
 
         <div className="filter-menu__content">
+          <div className="filter-section filter-section--static">
+            <div className="static-section-header">
+              <span>欄位搜尋</span>
+            </div>
+            <div className="section-panel open static">
+              {renderTextFieldOptions()}
+            </div>
+          </div>
+
           <div className="filter-section">
             <button
               type="button"
@@ -682,20 +691,6 @@ export function FilterPanel({
               {deviceLoading && <p className="option-hint">載入設備資料中...</p>}
               {deviceError && <p className="error-text">{deviceError}</p>}
               {!deviceLoading && !deviceError && renderDeviceOptions()}
-            </div>
-          </div>
-
-          <div className="filter-section">
-            <button
-              type="button"
-              className={`section-toggle ${openSections.includes("fields") ? "open" : ""}`}
-              onClick={() => toggleSection("fields")}
-            >
-              <span>欄位搜尋</span>
-              <span className="section-toggle__icon" aria-hidden="true" />
-            </button>
-            <div className={`section-panel ${openSections.includes("fields") ? "open" : ""}`}>
-              {renderTextFieldOptions()}
             </div>
           </div>
 
@@ -732,7 +727,7 @@ export function FilterPanel({
           <button type="button" className="clear-button" onClick={onClear}>
             清空篩選
           </button>
-          <button type="button" onClick={onSubmit} disabled={submitting}>
+          <button type="button" className="apply-button" onClick={onSubmit} disabled={submitting}>
             {submitting ? "搜尋中..." : "套用條件"}
           </button>
         </footer>

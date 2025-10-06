@@ -17,9 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY config.yaml device.yaml ./
 
-# 創建必要的目錄
-RUN mkdir -p data/tickets/active data/tickets/archive logs
-
 # 設定環境變數
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1

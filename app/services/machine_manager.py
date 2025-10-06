@@ -8,15 +8,13 @@ from app.utils import iter_device_entries
 
 logger = logging.getLogger("machine_manager")
 
+
 class MachineManager:
-    """機器管理器 - 負責機器分配、釋放和狀態管理"""
-    
-    def __init__(self):
-        """
-        初始化機器管理器
-        """
+    """集中管理 device.yaml 中所有測試機的可用狀態。"""
+
+    def __init__(self) -> None:
         self._machines: Dict[str, Machine] = self._load_machines_from_config()
-        
+
     def _load_machines_from_config(self) -> Dict[str, Machine]:
         machines: Dict[str, Machine] = {}
 
@@ -28,18 +26,17 @@ class MachineManager:
                     ip = str(dev["ip"])
                     port = int(dev["port"])
                     serial = str(dev["serial_number"])
-                except (KeyError, TypeError, ValueError) as e:
+                except (KeyError, TypeError, ValueError) as error:
                     logger.error(
                         "Bad device entry under %s/%s/%s: %s (%s)",
                         vendor,
                         model,
                         version,
                         dev,
-                        e,
+                        error,
                     )
                     continue
 
-                # 若 serial 重複，後者覆蓋並提示
                 if serial in machines:
                     logger.warning(
                         "Duplicate serial '%s' found; overriding previous entry.", serial
@@ -52,128 +49,102 @@ class MachineManager:
                     ip=ip,
                     port=port,
                     serial=serial,
+                    available=True,
                 )
 
         if not has_entries:
             logger.warning("No valid machines found in config.")
 
         return machines
-    
-    def _check_model_supported(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
-        """
-        檢查機器是否支援指定的型號(可用來擴展更多條件)
-        """
-        if machine.vendor != vendor:
-            return False
-        if machine.model != model:
-            return False
-        if machine.version != version:
-            return False
-        return True
 
-    def _get_available_machines(self, vendor: str, model: str, version: str) -> List[Machine]:
-        """取得空閒的機器列表"""
-        available = []
-        for machine in self._machines.values():
-            if machine.ticket_id is None and self._check_model_supported(machine, vendor, model, version):
-                available.append(machine)
-        return available
-
-    def allocate_machine(self, ticket_id: str, vendor: str, model: str, version: str) -> Optional[Machine]:
-        """
-        為票據分配機器
-        
-        Args:
-            ticket_id: 票據ID
-            vendor: 供應商
-            model: 型號
-            
-        Returns:
-            Optional[Machine]: 分配的機器，如果無可用機器則返回 None
-        """
-        available_machines = self._get_available_machines(vendor, model, version)
-        if not available_machines:
-            logger.warning("No available machines for ticket: %s", ticket_id)
-            return None
-
-        selected_machine = available_machines[0]
-
-        if not selected_machine:
-            logger.error("Failed to select machine for ticket: %s", ticket_id)
-            return None
-
-        # 分配機器
-        self._machines[selected_machine.serial].ticket_id = ticket_id
-        logger.info("Allocated machine: %s to ticket: %s", selected_machine.serial, ticket_id)
-        return selected_machine
-
-    def release_machine(self, machine: Machine) -> bool:
-        """
-        釋放機器
-        
-        Args:
-            machine: 機器物件
-            
-        Returns:
-            bool: 是否成功釋放
-        """
-        if machine.serial not in self._machines:
-            logger.error("Machine %s not found", machine.serial)
-            return False
-
-        ticket_id = self._machines[machine.serial].ticket_id
-        self._machines[machine.serial].ticket_id = None
-        logger.info(
-            "Released machine: %s (was processing ticket: %s)", machine.serial, ticket_id
+    def _matches(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
+        return (
+            machine.vendor == vendor
+            and machine.model == model
+            and machine.version == version
         )
-        return True
 
-    def validate_ticket_machine(self, ticket_id: str, machine_serial: str) -> bool:
-        """
-        驗證票據確實分配給指定機器
-        
+    def list_machines(
+        self,
+        vendor: str | None = None,
+        model: str | None = None,
+        version: str | None = None,
+        status: str | None = None,
+    ) -> List[Machine]:
+        """Return machines filtered by optional criteria."""
+
+        expected_availability: bool | None = None
+        if status is not None:
+            normalized = status.lower()
+            if normalized not in {"available", "unavailable"}:
+                raise ValueError(f"Unsupported status filter: {status}")
+            expected_availability = normalized == "available"
+
+        results: List[Machine] = []
+        for machine in self._machines.values():
+            if not self._matches(
+                machine,
+                vendor if vendor is not None else machine.vendor,
+                model if model is not None else machine.model,
+                version if version is not None else machine.version,
+            ):
+                continue
+            if expected_availability is not None and machine.available != expected_availability:
+                continue
+            results.append(machine)
+
+        return results
+
+    def reserve_machines(
+        self, vendor: str, model: str, version: str
+    ) -> Machine | None:
+        """Reserve available machines that match the given spec.
+
         Args:
-            ticket_id: 票據ID
-            machine_serial: 機器ID
-            
+            vendor: Vendor identifier from device.yaml.
+            model: Model identifier.
+            version: Version string.
         Returns:
-            bool: 是否匹配
+            Machine | None: reserved machine. The machine is flagged unavailable immediately.
         """
-        machine = self.get_machine_by_serial(machine_serial)
-        machine_ticket = machine.ticket_id if machine else None
 
-        return machine_ticket == ticket_id
+        available_candidates = [
+            machine
+            for machine in self._machines.values()
+            if machine.available and self._matches(machine, vendor, model, version)
+        ]
 
-    def get_machine_status(self) -> Dict[str, Optional[str]]:
-        """
-        取得所有機器的狀態
-        
-        Returns:
-            Dict[str, Optional[str]]: 機器狀態 (None = 空閒, 票據ID = 忙碌)
-        """
-        return {serial: machine.ticket_id for serial, machine in self._machines.items()}
+        if not available_candidates:
+            logger.info(
+                "No available machines for %s/%s/%s", vendor, model, version
+            )
+            return None
+
+        selected = available_candidates[0]
+        selected.available = False
+        logger.info(
+            "Reserved machine %s for %s/%s/%s",
+            selected.serial,
+                vendor,
+                model,
+                version,
+            )
+
+        return selected
+
+    def release_machine(self, serial: str) -> bool:
+        machine = self._machines.get(serial)
+        if not machine:
+            logger.warning("Attempted to release unknown machine serial=%s", serial)
+            return False
+
+        if machine.available:
+            logger.info("Machine %s already available", serial)
+            return True
+
+        machine.available = True
+        logger.info("Released machine %s", serial)
+        return True
 
     def get_machine_by_serial(self, serial: str) -> Optional[Machine]:
-        """
-        根據序號取得機器
-        
-        Args:
-            serial: 機器序號
-            
-        Returns:
-            Optional[Machine]: 機器物件或 None
-        """
         return self._machines.get(serial)
-    
-    def get_running_count(self) -> int:
-        """
-        取得正在執行中的票據數量
-        
-        Returns:
-            int: 執行中的票據數量
-        """
-        count = 0
-        for machine in self._machines.values():
-            if machine.ticket_id is not None:
-                count += 1
-        return count

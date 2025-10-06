@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, asdict
+
 
 @dataclass
 class Machine:
@@ -9,4 +9,12 @@ class Machine:
     ip: str
     port: int
     serial: str
-    ticket_id: Optional[str] = None
+    available: bool = True
+
+    def to_dict(self) -> dict:
+        """Return a serializable representation of the machine."""
+        data = asdict(self)
+        data["status"] = "available" if self.available else "unavailable"
+        # Keep backward compatible field name for serial number consumers.
+        data["serial_number"] = data.pop("serial")
+        return data

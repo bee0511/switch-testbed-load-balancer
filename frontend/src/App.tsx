@@ -1,201 +1,279 @@
-import { useMemo, useState, useRef, useEffect } from "react";
-import { FilterPanel } from "./components/FilterPanel";
-import { TicketCard } from "./components/TicketCard";
-import { TicketModal } from "./components/TicketModal";
-import { useDeviceOptions } from "./hooks/useDeviceOptions";
-import { useTickets } from "./hooks/useTickets";
-import type { FilterState, Ticket } from "./types";
+import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useMachines } from "./hooks/useMachines";
+import type { Machine, MachineFilters } from "./types";
 import "./App.css";
 
-// 動畫持續時間常數，確保 JS 和 CSS 同步
-const ANIMATION_DURATION = 300;
+function StatusBadge({ status }: { status: Machine["status"] }) {
+  return <span className={`status-pill status-pill--${status}`}>{status}</span>;
+}
 
-const initialFilters: FilterState = {
-  activeFields: [],
-  fieldValues: {},
-  dateRanges: {
-    enqueued_at: {},
-    started_at: {},
-    completed_at: {}
-  },
-  resultData: "",
-  rawData: "",
-};
-
-function cloneFilters(filters: FilterState): FilterState {
-  return {
-    activeFields: [...filters.activeFields],
-    fieldValues: { ...filters.fieldValues },
-    dateRanges: Object.fromEntries(
-      Object.entries(filters.dateRanges).map(([key, range]) => [key, { ...range }])
-    ) as FilterState["dateRanges"],
-    resultData: filters.resultData,
-    rawData: filters.rawData,
-  };
+function MachineCard({ machine }: { machine: Machine }) {
+  return (
+    <article className="machine-card">
+      <header>
+        <h3>
+          {machine.vendor} / {machine.model}
+        </h3>
+        <StatusBadge status={machine.status} />
+      </header>
+      <dl>
+        <div>
+          <dt>Version</dt>
+          <dd>{machine.version}</dd>
+        </div>
+        <div>
+          <dt>Serial</dt>
+          <dd>{machine.serial_number}</dd>
+        </div>
+        <div>
+          <dt>IP</dt>
+          <dd>{machine.ip}</dd>
+        </div>
+        <div>
+          <dt>Port</dt>
+          <dd>{machine.port}</dd>
+        </div>
+      </dl>
+    </article>
+  );
 }
 
 export default function App() {
-  const [pendingFilters, setPendingFilters] = useState<FilterState>(initialFilters);
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilters);
-  const { tickets, loading, error } = useTickets(appliedFilters);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
-  const [isClosingModal, setIsClosingModal] = useState<boolean>(false);
-  const [isClosingFilter, setIsClosingFilter] = useState<boolean>(false);
-  const { options: deviceOptions, loading: deviceLoading, error: deviceError } = useDeviceOptions();
-  
-  // 用於清理 timeout 的 refs
-  const modalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const filterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [filters, setFilters] = useState<MachineFilters>({ status: "all" });
+  const { machines, loading, error, refresh } = useMachines(15000);
 
-  // 組件卸載時清理所有 timeout
-  useEffect(() => {
-    return () => {
-      if (modalTimeoutRef.current) {
-        clearTimeout(modalTimeoutRef.current);
+  const vendorTree = useMemo(() => {
+    const map = new Map<string, Map<string, Set<string>>>();
+    machines.forEach((machine) => {
+      if (!map.has(machine.vendor)) {
+        map.set(machine.vendor, new Map());
       }
-      if (filterTimeoutRef.current) {
-        clearTimeout(filterTimeoutRef.current);
+      const modelMap = map.get(machine.vendor)!;
+      if (!modelMap.has(machine.model)) {
+        modelMap.set(machine.model, new Set());
       }
+      modelMap.get(machine.model)!.add(machine.version);
+    });
+    return map;
+  }, [machines]);
+
+  const vendors = useMemo(() => Array.from(vendorTree.keys()), [vendorTree]);
+  const models = useMemo(() => {
+    if (!filters.vendor) {
+      return [] as string[];
+    }
+    const modelMap = vendorTree.get(filters.vendor);
+    if (!modelMap) {
+      return [] as string[];
+    }
+    return Array.from(modelMap.keys());
+  }, [vendorTree, filters.vendor]);
+  const versions = useMemo(() => {
+    if (!filters.vendor || !filters.model) {
+      return [] as string[];
+    }
+    const modelMap = vendorTree.get(filters.vendor);
+    const versionSet = modelMap?.get(filters.model);
+    if (!versionSet) {
+      return [] as string[];
+    }
+    return Array.from(versionSet.values());
+  }, [vendorTree, filters.vendor, filters.model]);
+
+  const filteredMachines = useMemo(() => {
+    return machines.filter((machine) => {
+      if (filters.vendor && machine.vendor !== filters.vendor) {
+        return false;
+      }
+      if (filters.model && machine.model !== filters.model) {
+        return false;
+      }
+      if (filters.version && machine.version !== filters.version) {
+        return false;
+      }
+      if (filters.status && filters.status !== "all" && machine.status !== filters.status) {
+        return false;
+      }
+      return true;
+    });
+  }, [machines, filters]);
+
+  const hasActiveFilters = Boolean(
+    filters.vendor || filters.model || filters.version || (filters.status && filters.status !== "all")
+  );
+
+  const { total, available, unavailable } = useMemo(() => {
+    const availableCount = filteredMachines.filter((machine) => machine.available).length;
+    return {
+      total: filteredMachines.length,
+      available: availableCount,
+      unavailable: filteredMachines.length - availableCount,
     };
-  }, []);
+  }, [filteredMachines]);
 
-  const submitFilters = () => {
-    setAppliedFilters(cloneFilters(pendingFilters));
-    handleCloseFilter();
+  const handleVendorChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value || undefined;
+    setFilters((prev) => ({
+      ...prev,
+      vendor: value,
+      model: undefined,
+      version: undefined,
+    }));
   };
 
-  const clearFilters = () => {
-    setPendingFilters(cloneFilters(initialFilters));
-    setAppliedFilters(cloneFilters(initialFilters));
+  const handleModelChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value || undefined;
+    setFilters((prev) => ({
+      ...prev,
+      model: value,
+      version: undefined,
+    }));
   };
 
-  const handleCloseModal = () => {
-    if (isClosingModal) return; // 防止重複觸發
-    
-    // 清理之前的 timeout
-    if (modalTimeoutRef.current) {
-      clearTimeout(modalTimeoutRef.current);
-    }
-    
-    setIsClosingModal(true);
-    modalTimeoutRef.current = setTimeout(() => {
-      setSelectedTicket(null);
-      setIsClosingModal(false);
-      modalTimeoutRef.current = null;
-    }, ANIMATION_DURATION);
+  const handleVersionChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value || undefined;
+    setFilters((prev) => ({
+      ...prev,
+      version: value,
+    }));
   };
 
-  const handleCloseFilter = () => {
-    if (isClosingFilter) return; // 防止重複觸發
-    
-    // 清理之前的 timeout
-    if (filterTimeoutRef.current) {
-      clearTimeout(filterTimeoutRef.current);
-    }
-    
-    setIsClosingFilter(true);
-    filterTimeoutRef.current = setTimeout(() => {
-      setMenuOpen(false);
-      setIsClosingFilter(false);
-      filterTimeoutRef.current = null;
-    }, ANIMATION_DURATION);
+  const handleStatusChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value as MachineFilters["status"];
+    setFilters((prev) => ({
+      ...prev,
+      status: value,
+    }));
   };
 
-  const handleSelectTicket = (ticket: Ticket) => {
-    // 如果正在關閉模態，先清理狀態
-    if (isClosingModal && modalTimeoutRef.current) {
-      clearTimeout(modalTimeoutRef.current);
-      setIsClosingModal(false);
-      modalTimeoutRef.current = null;
-    }
-    setSelectedTicket(ticket);
+  const resetFilters = () => {
+    setFilters({ status: "all" });
   };
-
-  const handleOpenFilter = () => {
-    // 如果正在關閉篩選面板，先清理狀態
-    if (isClosingFilter && filterTimeoutRef.current) {
-      clearTimeout(filterTimeoutRef.current);
-      setIsClosingFilter(false);
-      filterTimeoutRef.current = null;
-    }
-    setMenuOpen(true);
-  };
-
-  const activeFilterCount = useMemo(() => {
-    const fieldCount = pendingFilters.activeFields.length;
-    const dateCount = Object.values(pendingFilters.dateRanges).filter(
-      (range) => range.from || range.to
-    ).length;
-    const textCount = [pendingFilters.resultData, pendingFilters.rawData].filter((value) =>
-      value.trim()
-    ).length;
-    return fieldCount + dateCount + textCount;
-  }, [pendingFilters]);
 
   return (
     <div className="app-shell">
-      <header className="top-bar">
-        <div className="brand">
-          <h1>Testbed Ticket Explorer</h1>
+      <header className="masthead">
+        <div>
+          <h1>Switch Testbed Inventory</h1>
+          <p>目前所有實驗機器的狀態與詳細資訊</p>
         </div>
-        <button 
-          type="button"
-          className="filter-status"
-          onClick={handleOpenFilter}
-          aria-label="開啟篩選條件"
-        >
-          <span className="status-label">篩選條件</span>
-          <span className="status-count">{activeFilterCount}</span>
-        </button>
-        <div className="search-actions">
-          <button type="button" onClick={submitFilters} disabled={loading}>
-            {loading ? "搜尋中..." : "立即搜尋"}
+        <div className="masthead__actions">
+          <div className="count-group">
+            <span className="count-group__item">
+              <strong>{available}</strong>
+              <span>可用</span>
+            </span>
+            <span className="count-group__item">
+              <strong>{unavailable}</strong>
+              <span>使用中</span>
+            </span>
+            <span className="count-group__item">
+              <strong>{total}</strong>
+              <span>總數</span>
+            </span>
+          </div>
+          <button type="button" onClick={refresh} disabled={loading}>
+            {loading ? "更新中..." : "立即更新"}
           </button>
         </div>
       </header>
 
-      <main className="results">
-        <header className="results__header">
-          <div>
-            <h2>搜尋結果</h2>
-            <p>共 {tickets.length} 筆符合條件的 ticket。</p>
+      <section className="filter-bar">
+        <form className="filter-form" onSubmit={(event) => event.preventDefault()}>
+          <div className="filter-field">
+            <label htmlFor="vendor-select">廠商</label>
+            <select
+              id="vendor-select"
+              value={filters.vendor ?? ""}
+              onChange={handleVendorChange}
+              disabled={vendors.length === 0}
+            >
+              <option value="">全部廠商</option>
+              {vendors.map((vendor) => (
+                <option key={vendor} value={vendor}>
+                  {vendor}
+                </option>
+              ))}
+            </select>
           </div>
-          {loading && <span className="pill">載入中...</span>}
-        </header>
 
+          <div className="filter-field">
+            <label htmlFor="model-select">Model</label>
+            <select
+              id="model-select"
+              value={filters.model ?? ""}
+              onChange={handleModelChange}
+              disabled={!filters.vendor || models.length === 0}
+            >
+              <option value="">全部 Model</option>
+              {models.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-field">
+            <label htmlFor="version-select">Version</label>
+            <select
+              id="version-select"
+              value={filters.version ?? ""}
+              onChange={handleVersionChange}
+              disabled={!filters.vendor || !filters.model || versions.length === 0}
+            >
+              <option value="">全部版本</option>
+              {versions.map((version) => (
+                <option key={version} value={version}>
+                  {version}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-field">
+            <label htmlFor="status-select">狀態</label>
+            <select
+              id="status-select"
+              value={filters.status ?? "all"}
+              onChange={handleStatusChange}
+            >
+              <option value="all">全部</option>
+              <option value="available">可用</option>
+              <option value="unavailable">使用中</option>
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+            >
+              清除條件
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <main className="content">
         {error && <div className="alert">{error}</div>}
 
-        {!loading && tickets.length === 0 && (
-          <p className="empty">找不到符合條件的 ticket，請調整搜尋條件。</p>
+        {!error && total === 0 && !loading && (
+          <p className="empty">
+            {hasActiveFilters ? "找不到符合篩選條件的機器。" : "device.yaml 尚未定義任何可追蹤的機器。"}
+          </p>
         )}
 
-        <div className="card-grid">
-          {tickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} onClick={handleSelectTicket} />
+        {loading && <p className="loading">讀取中...</p>}
+
+        <section className="machine-grid">
+          {filteredMachines.map((machine) => (
+            <MachineCard key={machine.serial_number} machine={machine} />
           ))}
-        </div>
+        </section>
       </main>
-
-      <FilterPanel
-        filters={pendingFilters}
-        onChange={setPendingFilters}
-        onSubmit={submitFilters}
-        onClear={clearFilters}
-        submitting={loading}
-        isOpen={menuOpen}
-        onClose={handleCloseFilter}
-        isClosing={isClosingFilter}
-        deviceConfig={deviceOptions}
-        deviceLoading={deviceLoading}
-        deviceError={deviceError}
-      />
-
-      <TicketModal 
-        ticket={selectedTicket} 
-        onClose={handleCloseModal}
-        isClosing={isClosingModal}
-      />
     </div>
   );
 }

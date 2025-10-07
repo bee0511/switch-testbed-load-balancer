@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./logs:/app/logs
+      - ./device.yaml:/app/device.yaml
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1

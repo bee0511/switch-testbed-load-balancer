@@ -15,7 +15,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 複製應用程式程式碼
 COPY app/ ./app/
-COPY config.yaml device.yaml ./
 
 # 設定環境變數
 ENV PYTHONPATH=/app

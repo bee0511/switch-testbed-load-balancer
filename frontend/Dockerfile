@@ -20,6 +20,10 @@ RUN npm cache clean --force && \
 # 複製其餘的前端原始碼
 COPY frontend/ .
 
+# 設定建置時的環境變數（從 docker-compose.yml 傳入）
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
 # 建置應用程式
 RUN npm run build
 

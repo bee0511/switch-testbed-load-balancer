@@ -3,60 +3,40 @@ vendors:
     models:
       - model: c8k
         versions:
-          - version: "1.0"
+          - version: "17.09.05e"
             devices:
-              - ip: 192.168.1.1
-                port: 6001
-                serial_number: c8kSerial1
-              - ip: 192.168.1.2
-                port: 6002
-                serial_number: c8kSerial2
-              - ip: 192.168.1.3
-                port: 6003
-                serial_number: c8kSerial3
+              - ip: 10.192.4.181
+                port: 22
+                serial_number: 97SQ3QZXPHF
+              - ip: 10.192.4.182
+                port: 22
+                serial_number: 9EET8R3N8UN
       - model: n9k
         versions:
-          - version: "9.3"
+          - version: "9.3(13)"
             devices:
-              - ip: 192.168.2.1
-                port: 7001
-                serial_number: n9kSerial1
-              - ip: 192.168.2.2
-                port: 7002
-                serial_number: n9kSerial2
-          - version: "10.3"
-            devices:
-              - ip: 192.168.3.1
-                port: 8001
-                serial_number: n9kSerial11
-              - ip: 192.168.3.2
-                port: 8002
-                serial_number: n9kSerial12
-              - ip: 192.168.3.3
-                port: 8003
-                serial_number: n9kSerial13
+              - ip: 10.192.4.183
+                port: 22
+                serial_number: 9XHJVKZ7XMR
+              - ip: 10.192.4.184
+                port: 22
+                serial_number: 934GG1QCI6D
       - model: xrv
         versions:
-          - version: "6.5"
+          - version: "7.4.2"
             devices:
-              - ip: 192.168.4.1
-                port: 9001
-                serial_number: xrvSerial1
-              - ip: 192.168.4.2
-                port: 9002
-                serial_number: xrvSerial2
+              - ip: 10.192.4.185
+                port: 22
+                serial_number: A0552319593
+              - ip: 10.192.4.186
+                port: 22
+                serial_number: 79CED161094
   - vendor: hp
     models:
-      - model: "5540"
+      - model: "5945"
         versions:
-          - version: "1.0"
+          - version: "7.1.070"
             devices:
-              - ip: 192.168.5.1
-                port: 1001
-                serial_number: hpSerial1
-              - ip: 192.168.5.2
-                port: 1002
-                serial_number: hpSerial2
-              - ip: 192.168.5.3
-                port: 1003
-                serial_number: hpSerial3
+              - ip: 10.192.197.202
+                port: 22
+                serial_number: CN2AK8302P

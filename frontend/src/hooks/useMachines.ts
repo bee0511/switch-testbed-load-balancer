@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Machine, MachineListResponse } from "../types";
 
 const API_PATH = "/machines";
-const DEFAULT_BASE_URL = "http://localhost:8000";
+const DEFAULT_BASE_URL = "http://10.192.194.121:8000";
 async function fetchMachines(): Promise<Machine[]> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BASE_URL;
   const response = await fetch(`${baseUrl}${API_PATH}`);

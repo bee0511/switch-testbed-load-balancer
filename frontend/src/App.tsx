@@ -103,12 +103,11 @@ export default function App() {
     filters.vendor || filters.model || filters.version || (filters.status && filters.status !== "all")
   );
 
-  const { total, available, unavailable } = useMemo(() => {
+  const { total, available } = useMemo(() => {
     const availableCount = filteredMachines.filter((machine) => machine.available).length;
     return {
       total: filteredMachines.length,
       available: availableCount,
-      unavailable: filteredMachines.length - availableCount,
     };
   }, [filteredMachines]);
 
@@ -163,10 +162,6 @@ export default function App() {
             <span className="count-group__item">
               <strong>{available}</strong>
               <span>可用</span>
-            </span>
-            <span className="count-group__item">
-              <strong>{unavailable}</strong>
-              <span>使用中</span>
             </span>
             <span className="count-group__item">
               <strong>{total}</strong>
@@ -242,6 +237,7 @@ export default function App() {
               <option value="all">全部</option>
               <option value="available">可用</option>
               <option value="unavailable">使用中</option>
+              <option value="unreachable">無法連線</option>
             </select>
           </div>
 

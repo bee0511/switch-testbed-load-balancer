@@ -22,7 +22,9 @@ def list_machines(
     version: str | None = Query(default=None),
     status: str | None = Query(
         default=None,
-        description="Filter by machine availability status (available/unavailable).",
+        description=(
+            "Filter by machine availability status (available/unavailable/unreachable)."
+        ),
     ),
 ) -> dict:
     """List machines filtered by the given criteria and return filter options."""

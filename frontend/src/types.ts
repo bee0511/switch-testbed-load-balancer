@@ -1,4 +1,4 @@
-export type MachineStatus = "available" | "unavailable";
+export type MachineStatus = "available" | "unavailable" | "unreachable";
 
 export interface Machine {
   vendor: string;
@@ -19,5 +19,5 @@ export interface MachineFilters {
   vendor?: string;
   model?: string;
   version?: string;
-  status?: "available" | "unavailable" | "all";
+  status?: "available" | "unavailable" | "unreachable" | "all";
 }

@@ -242,6 +242,7 @@ export default function App() {
               <option value="all">全部</option>
               <option value="available">可用</option>
               <option value="unavailable">使用中</option>
+              <option value="unreachable">無法連線</option>
             </select>
           </div>
 

@@ -1,6 +1,7 @@
 """機器管理模組 - 負責機器分配和管理"""
 
 import logging
+import subprocess
 from typing import Dict, List, Optional
 
 from app.models.machine import Machine
@@ -50,6 +51,7 @@ class MachineManager:
                     port=port,
                     serial=serial,
                     available=True,
+                    reachable=True,
                 )
 
         if not has_entries:
@@ -64,6 +66,46 @@ class MachineManager:
             and machine.version == version
         )
 
+    def _ping_machine(self, machine: Machine) -> bool:
+        try:
+            result = subprocess.run(
+                ["ping", "-c", "1", "-W", "1", machine.ip],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except OSError as error:
+            logger.warning(
+                "Ping command failed for %s (%s): %s",
+                machine.serial,
+                machine.ip,
+                error,
+            )
+            return False
+
+        return result.returncode == 0
+
+    def _refresh_machine_reachability(self, machine: Machine) -> None:
+        if not machine.available and machine.reachable:
+            # Reserved machine presumed reachable; skip ping to avoid interfering with jobs.
+            return
+
+        reachable = self._ping_machine(machine)
+        if machine.reachable != reachable:
+            state = "reachable" if reachable else "unreachable"
+            logger.info("Machine %s marked as %s", machine.serial, state)
+        machine.reachable = reachable
+
+    def _refresh_reachability(self) -> None:
+        for machine in self._machines.values():
+            if machine.available or not machine.reachable:
+                self._refresh_machine_reachability(machine)
+
+    def _status_for(self, machine: Machine) -> str:
+        if not machine.reachable:
+            return "unreachable"
+        return "available" if machine.available else "unavailable"
+
     def list_machines(
         self,
         vendor: str | None = None,
@@ -73,12 +115,14 @@ class MachineManager:
     ) -> List[Machine]:
         """Return machines filtered by optional criteria."""
 
-        expected_availability: bool | None = None
+        expected_status: str | None = None
         if status is not None:
             normalized = status.lower()
-            if normalized not in {"available", "unavailable"}:
+            if normalized not in {"available", "unavailable", "unreachable"}:
                 raise ValueError(f"Unsupported status filter: {status}")
-            expected_availability = normalized == "available"
+            expected_status = normalized
+
+        self._refresh_reachability()
 
         results: List[Machine] = []
         for machine in self._machines.values():
@@ -89,7 +133,8 @@ class MachineManager:
                 version if version is not None else machine.version,
             ):
                 continue
-            if expected_availability is not None and machine.available != expected_availability:
+            machine_status = self._status_for(machine)
+            if expected_status is not None and machine_status != expected_status:
                 continue
             results.append(machine)
 
@@ -108,10 +153,16 @@ class MachineManager:
             Machine | None: reserved machine. The machine is flagged unavailable immediately.
         """
 
+        for machine in self._machines.values():
+            if machine.available:
+                self._refresh_machine_reachability(machine)
+
         available_candidates = [
             machine
             for machine in self._machines.values()
-            if machine.available and self._matches(machine, vendor, model, version)
+            if machine.available
+            and machine.reachable
+            and self._matches(machine, vendor, model, version)
         ]
 
         if not available_candidates:
@@ -125,10 +176,10 @@ class MachineManager:
         logger.info(
             "Reserved machine %s for %s/%s/%s",
             selected.serial,
-                vendor,
-                model,
-                version,
-            )
+            vendor,
+            model,
+            version,
+        )
 
         return selected
 
@@ -143,6 +194,7 @@ class MachineManager:
             return True
 
         machine.available = True
+        self._refresh_machine_reachability(machine)
         logger.info("Released machine %s", serial)
         return True
 

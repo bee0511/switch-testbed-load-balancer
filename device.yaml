@@ -37,6 +37,9 @@ vendors:
         versions:
           - version: "7.1.070"
             devices:
+              - ip: 10.192.197.201
+                port: 22
+                serial_number: SERIAL_123
               - ip: 10.192.197.202
                 port: 22
                 serial_number: CN2AK8302P

@@ -115,5 +115,6 @@ make run
   ```
 - Start application:
    ```bash
-   docker-compose up -d --no-build
+   docker-compose up -d
    ```
+- 注意: 前端的環境變數 `VITE_API_BASE_URL` 要去 `frontend/Dockerfile` 改成後端的 IP + port, 否則前端沒辦法打 API 到後端

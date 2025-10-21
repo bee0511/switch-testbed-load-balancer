@@ -24,11 +24,6 @@ services:
   frontend:
     image: bee000092/switch-testbed-frontend:latest
     container_name: switch-testbed-frontend
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-      args:
-        - VITE_API_BASE_URL=http://10.192.194.121:8000
     restart: unless-stopped
     ports:
       - "8080:80"

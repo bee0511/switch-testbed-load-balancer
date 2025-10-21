@@ -1,7 +1,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Iterator, Tuple
+from typing import Dict, Iterator, Tuple, Optional
 
 import yaml
 
@@ -58,3 +58,69 @@ def build_supported_versions_map(config: DeviceConfig | None = None) -> Dict[str
             supported[vendor][model].append(version)
 
     return supported
+
+
+@lru_cache()
+def load_credentials() -> Dict[str, Dict[str, str]]:
+    """從 credentials.yaml 載入登入憑證
+
+    Returns:
+        Dict[serial_number, Dict[username, password]]
+        例如: {"97SQ3QZXPHF": {"username": "admin", "password": "xxx"}}
+    """
+    credentials_path = Path(__file__).parent.parent / "credentials.yaml"
+
+    if not credentials_path.exists():
+        logger.warning(
+            "credentials.yaml not found. Please copy credentials.yaml.example "
+            "to credentials.yaml and fill in your passwords."
+        )
+        return {}
+
+    try:
+        with open(credentials_path, "r", encoding="utf-8") as file:
+            data = yaml.safe_load(file) or {}
+    except Exception as e:
+        logger.exception("Error loading credentials.yaml: %s", e)
+        return {}
+
+    return data.get("credentials", {})
+
+
+def get_device_credentials(serial: str) -> Optional[tuple[str, str]]:
+    """取得指定設備的登入憑證
+
+    Args:
+        serial: 設備序號
+
+    Returns:
+        (username, password) tuple
+    """
+    credentials = load_credentials()
+
+    # 先查找特定設備的憑證
+    if serial in credentials:
+        cred = credentials[serial]
+        username = cred.get("username", "admin")
+        password = cred.get("password", "")
+        return username, password
+
+    # 使用預設憑證
+    credentials_path = Path(__file__).parent.parent / "credentials.yaml"
+    if credentials_path.exists():
+        try:
+            with open(credentials_path, "r", encoding="utf-8") as file:
+                data = yaml.safe_load(file) or {}
+            default_cred = data.get("default", {})
+            username = default_cred.get("username", "admin")
+            password = default_cred.get("password", "")
+            return username, password
+        except Exception:
+            pass
+
+    logger.warning(
+        "No credentials found for device %s or in the default credentials. Please add to credentials.yaml",
+        serial
+    )
+
+    return None

@@ -218,3 +218,6 @@ data/
 # cfg/
 
 /.vscode
+
+# Credentials file - contains passwords
+credentials.yaml

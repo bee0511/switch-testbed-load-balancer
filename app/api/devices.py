@@ -47,7 +47,7 @@ def list_machines(
         "machines": machines,
     }
 
-@router.get("/get/{vendor}/{model}/{version}")
+@router.post("/reserve/{vendor}/{model}/{version}")
 def reserve_available_machines(
     vendor: str,
     model: str,

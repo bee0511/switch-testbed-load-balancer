@@ -24,7 +24,7 @@ function MachineCard({ machine }: { machine: Machine }) {
         </div>
         <div>
           <dt>Serial</dt>
-          <dd>{machine.serial_number}</dd>
+          <dd>{machine.serial}</dd>
         </div>
         <div>
           <dt>IP</dt>

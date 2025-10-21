@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.devices import router as devices_router
-from app.logging_config import setup_logging
+from app.services.logging_config import setup_logging
 from app.services.machine_manager import MachineManager
 
 setup_logging()

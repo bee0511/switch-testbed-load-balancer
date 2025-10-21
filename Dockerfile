@@ -7,6 +7,8 @@ WORKDIR /app
 # 安裝系統依賴
 RUN apt-get update && apt-get install -y \
     curl \
+    sshpass \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # 複製依賴列表並直接使用 pip 安裝

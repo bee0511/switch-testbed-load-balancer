@@ -9,8 +9,8 @@ A FastAPI-based service for reserving and tracking switch testbed machines.
 
 | Method | Path | 說明 | 回傳格式 |
 | ------ | ---- | ---- | -------- |
-| `GET` | `/machines` | 取得 device.yaml 中所有機器的即時狀態，可使用 `vendor`、`model`、`version`、`status=available\|unavailable` 等查詢參數。 | **200**: `{ "machines": Machine[] }`。<br>**4xx/5xx**: `{ "detail": "錯誤說明" }`。若無符合條件的機器，`machines` 為空陣列。|
-| `POST` | `/reserve/{vendor}/{model}/{version}` | 將符合條件且目前可用的機器全部標記為 `unavailable` 並回傳詳細資訊。| **200**: `Machine`。<br>**404**: `{ "detail": "No available machines for given specification" }`。|
+| `GET` | `/machines` | 取得 device.yaml 中所有機器的即時狀態，可使用 `vendor`、`model`、`version`、`status=available\|unavailable\|unreachable` 等查詢參數。 | **200**: `{ "machines": Machine[] }`。<br>**4xx/5xx**: `{ "detail": "錯誤說明" }`。若無符合條件的機器，`machines` 為空陣列。|
+| `POST` | `/reserve/{vendor}/{model}/{version}` | 將符合條件且目前可用的其中一台機器標記為 `unavailable` 並回傳詳細資訊。| **200**: `Machine`。<br>**404**: `{ "detail": "No available machines for given specification" }`。|
 | `POST` | `/release/{serial_number}` | 將機器釋放回 `available` 狀態。 | **200**: `{ "machine": Machine }`。<br>**404**: `{ "detail": "Machine not found" }`。|
 
 

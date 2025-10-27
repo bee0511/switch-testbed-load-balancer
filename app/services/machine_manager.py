@@ -67,7 +67,7 @@ class MachineManager:
                     machine.serial,
                     machine.ip,
                 )
-            elif not self._validator.check_serial(machine):
+            elif not self._check_serial(machine):
                 machine.status = "unavailable"
                 logger.error(
                     "Machine %s (%s) has invalid serial.",
@@ -76,6 +76,17 @@ class MachineManager:
                 )
             elif machine.status != "unavailable":
                 machine.status = "available"
+
+    def _check_specific_machine_status(self, machine: Machine) -> bool:
+        if not self._check_reachability(machine):
+            machine.status = "unreachable"
+            return False
+        elif not self._check_serial(machine):
+            machine.status = "unavailable"
+            return False
+        else:
+            machine.status = "available"
+        return True
 
     def _matches(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
         return (
@@ -86,7 +97,10 @@ class MachineManager:
 
     def _check_reachability(self, machine: Machine) -> bool:
         return self._validator.validate_machine_reachability(machine)
-    
+
+    def _check_serial(self, machine: Machine) -> bool:
+        return self._validator.check_serial(machine)
+
     def list_machines(
         self,
         vendor: str | None = None,
@@ -123,7 +137,6 @@ class MachineManager:
         Returns:
             Machine | None: reserved machine. The machine is flagged unavailable immediately.
         """
-        self._process_machine_status()
         available_candidates = [
             machine
             for machine in self._machines.values()
@@ -137,15 +150,27 @@ class MachineManager:
             )
             return None
 
-        selected = available_candidates[0]
-        selected.status = "unavailable"
-        logger.info(
-            "Reserved machine %s for %s/%s/%s",
-            selected.serial,
-            vendor,
-            model,
-            version,
-        )
+        selected = None
+        for candidate in available_candidates:
+            if self._check_specific_machine_status(candidate):
+                selected = candidate
+                break
+        if selected:
+            selected.status = "unavailable"
+            logger.info(
+                "Reserved machine %s for %s/%s/%s",
+                selected.serial,
+                vendor,
+                model,
+                version,
+            )
+        else:
+            logger.warning(
+                "No reachable and valid machines for %s/%s/%s",
+                vendor,
+                model,
+                version,
+            )
 
         return selected
 

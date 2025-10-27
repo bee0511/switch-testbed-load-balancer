@@ -7,7 +7,6 @@ export interface Machine {
   ip: string;
   port: number;
   serial: string;
-  available: boolean;
   status: MachineStatus;
 }
 

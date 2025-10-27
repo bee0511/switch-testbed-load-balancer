@@ -46,9 +46,6 @@ class Validator:
                 stderr=subprocess.DEVNULL,
             )
             reachable = result.returncode == 0
-            if not reachable:
-                logger.warning("Machine %s (%s) is unreachable.",
-                               machine.serial, machine.ip)
             return reachable
         except Exception as e:
             logger.error(

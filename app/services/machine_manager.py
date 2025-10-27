@@ -62,7 +62,6 @@ class MachineManager:
         for machine in self._machines.values():
             if not self._check_reachability(machine):
                 machine.status = "unreachable"
-                machine.available = False
                 logger.error(
                     "Machine %s (%s) is unreachable.",
                     machine.serial,
@@ -70,15 +69,13 @@ class MachineManager:
                 )
             elif not self._validator.check_serial(machine):
                 machine.status = "unavailable"
-                machine.available = False
                 logger.error(
                     "Machine %s (%s) has invalid serial.",
                     machine.serial,
                     machine.ip,
                 )
-            elif machine.status != "unavailable" and not machine.available:
+            elif machine.status != "unavailable":
                 machine.status = "available"
-                machine.available = True
 
     def _matches(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
         return (
@@ -130,7 +127,7 @@ class MachineManager:
         available_candidates = [
             machine
             for machine in self._machines.values()
-            if machine.available == True
+            if machine.status == "available"
             and self._matches(machine, vendor, model, version)
         ]
 
@@ -141,7 +138,6 @@ class MachineManager:
             return None
 
         selected = available_candidates[0]
-        selected.available = False
         selected.status = "unavailable"
         logger.info(
             "Reserved machine %s for %s/%s/%s",
@@ -160,7 +156,7 @@ class MachineManager:
                 "Attempted to release unknown machine serial=%s", serial)
             return False
 
-        if machine.available:
+        if machine.status == "available":
             logger.warning("Machine %s already available", serial)
             return True
         
@@ -172,7 +168,6 @@ class MachineManager:
             )
             return False
 
-        machine.available = True
         machine.status = "available"
         logger.info("Released machine %s", serial)
         return True

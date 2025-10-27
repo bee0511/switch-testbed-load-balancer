@@ -104,7 +104,7 @@ export default function App() {
   );
 
   const { total, available } = useMemo(() => {
-    const availableCount = filteredMachines.filter((machine) => machine.available).length;
+    const availableCount = filteredMachines.filter((machine) => machine.status === "available").length;
     return {
       total: filteredMachines.length,
       available: availableCount,
@@ -266,7 +266,7 @@ export default function App() {
 
         <section className="machine-grid">
           {filteredMachines.map((machine) => (
-            <MachineCard key={machine.serial_number} machine={machine} />
+            <MachineCard key={machine.serial} machine={machine} />
           ))}
         </section>
       </main>

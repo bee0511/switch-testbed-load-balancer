@@ -10,7 +10,6 @@ class Machine:
     port: int
     serial: str
     status: str = "available"
-    available: bool = True
 
     def to_dict(self) -> dict:
         """Return a serializable representation of the machine."""

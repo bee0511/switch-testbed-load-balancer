@@ -177,7 +177,7 @@ class Validator:
         creds = get_device_credentials(machine.serial)
         if not creds:
             logger.error("No credentials for %s, skip.", machine.serial)
-            return True
+            return False
         username, password = creds
 
         key = (machine.vendor.lower(), machine.model.lower())

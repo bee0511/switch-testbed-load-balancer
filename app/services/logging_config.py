@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-_LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+_LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
 
 
 def _ensure_log_dir() -> Path:

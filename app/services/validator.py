@@ -11,7 +11,7 @@ logger = logging.getLogger("validator")
 
 
 class Validator:
-    """負責驗證機器狀態和配置的模組。"""
+    """The Validator class is responsible for validating machine reachability and serial numbers."""
 
     def __init__(self, machines: Dict[str, Machine]) -> None:
         self._machines = machines
@@ -38,7 +38,14 @@ class Validator:
         }
 
     def validate_machine_reachability(self, machine: Machine) -> bool:
-        """使用 ping 命令檢查機器是否可達。"""
+        """Check the given machine is reachable or not with ping command.
+
+        Args:
+            machine (Machine): The machine to check reachability
+
+        Returns:
+            bool: True if the machine is reachable by ping command, False otherwise.
+        """
         try:
             result = subprocess.run(
                 ["ping", "-c", "1", "-W", "1", machine.ip],
@@ -65,6 +72,16 @@ class Validator:
     # --- 解析：從完整輸出抓「整機/chassis」的序號 ---
 
     def parse_serial(self, vendor: str, model: str, out: str) -> str:
+        """Parse the serial number for the given vendor and the model from the output
+
+        Args:
+            vendor (str): The vendor for the machine
+            model (str): The model for the machine
+            out (str): The command output to parse
+
+        Returns:
+            str: The parsed serial number, or an empty string if not found
+        """
         txt = out
 
         if vendor == "cisco" and model == "n9k":
@@ -125,7 +142,17 @@ class Validator:
         return ""
 
     def _ssh_run(self, machine: Machine, username: str, password: str, commands: list[str]) -> str:
-        """執行 SSH 命令,根據平台選擇適當的方式"""
+        """Execute the commands by using SSH to the machine
+
+        Args:
+            machine (Machine): The machine to be connected
+            username (str): The SSH username
+            password (str): The SSH password
+            commands (list[str]): The list of commands to execute
+
+        Returns:
+            str: The output from the SSH command execution
+        """
         ssh_opts = [
             "-o", "StrictHostKeyChecking=no",
             "-o", "UserKnownHostsFile=/dev/null",
@@ -171,6 +198,14 @@ class Validator:
         return result.stdout
 
     def check_serial(self, machine: Machine) -> bool:
+        """Check the serial number is matched with the credentials.yaml
+
+        Args:
+            machine (Machine): The machine to check
+
+        Returns:
+            bool: True if the serial number matches, False otherwise.
+        """
         creds = get_device_credentials(machine.serial)
         if not creds:
             logger.error("No credentials for %s, skip.", machine.serial)

@@ -11,7 +11,7 @@ logger = logging.getLogger("machine_manager")
 
 
 class MachineManager:
-    """集中管理 device.yaml 中所有測試機的可用狀態。"""
+    """Manages the allocation and status of machines."""
 
     def __init__(self) -> None:
         self._machines = self._load_machines_from_config()
@@ -19,6 +19,11 @@ class MachineManager:
         self._process_machine_status()
 
     def _load_machines_from_config(self) -> Dict[str, Machine]:
+        """Load machines from the device configuration.
+
+        Returns:
+            Dict[str, Machine]: A dictionary of machines indexed by their serial numbers.
+        """
         machines: Dict[str, Machine] = {}
 
         has_entries = False
@@ -59,25 +64,19 @@ class MachineManager:
         return machines
 
     def _process_machine_status(self) -> None:
+        """Process the status of each machine."""
         for machine in self._machines.values():
-            if not self._check_reachability(machine):
-                machine.status = "unreachable"
-                logger.error(
-                    "Machine %s (%s) is unreachable.",
-                    machine.serial,
-                    machine.ip,
-                )
-            elif not self._check_serial(machine):
-                machine.status = "unavailable"
-                logger.error(
-                    "Machine %s (%s) has invalid serial.",
-                    machine.serial,
-                    machine.ip,
-                )
-            elif machine.status != "unavailable":
-                machine.status = "available"
+            self._check_specific_machine_status(machine)
 
     def _check_specific_machine_status(self, machine: Machine) -> bool:
+        """Check the status of a specific machine.
+
+        Args:
+            machine (Machine): The machine to check.
+
+        Returns:
+            bool: True if the machine is reachable and has a valid serial, False otherwise.
+        """
         if not self._check_reachability(machine):
             machine.status = "unreachable"
             return False
@@ -89,6 +88,17 @@ class MachineManager:
         return True
 
     def _matches(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
+        """Check whether the machine matches the given criteria.
+
+        Args:
+            machine (Machine): the machine to check.
+            vendor (str): the vendor to match.
+            model (str): the model to match.
+            version (str): the version to match.
+
+        Returns:
+            bool: True if the machine matches the criteria, False otherwise.
+        """
         return (
             machine.vendor == vendor
             and machine.model == model
@@ -96,9 +106,24 @@ class MachineManager:
         )
 
     def _check_reachability(self, machine: Machine) -> bool:
+        """Check whether the machine is reachable.
+
+        Args:
+            machine (Machine): The machine to check.
+
+        Returns:
+            bool: True if the machine is reachable, False otherwise.
+        """
         return self._validator.validate_machine_reachability(machine)
 
     def _check_serial(self, machine: Machine) -> bool:
+        """Check whether the machine's serial number is valid.
+        Args:
+            machine (Machine): The machine to check.
+
+        Returns:
+            bool: True if the machine's serial number is valid, False otherwise.
+        """
         return self._validator.check_serial(machine)
 
     def list_machines(
@@ -108,7 +133,16 @@ class MachineManager:
         version: str | None = None,
         status: str | None = None,
     ) -> List[Machine]:
-        """Return machines filtered by optional criteria."""
+        """
+        List machines filtered by the given criteria.
+        Args:
+            vendor (str | None): Vendor identifier from device.yaml.
+            model (str | None): Model identifier.
+            version (str | None): Version string.
+            status (str | None): Machine status filter (available/unavailable/unreachable).
+        Returns:
+            List[Machine]: List of machines matching the criteria.
+        """
 
         results: List[Machine] = []
         for machine in self._machines.values():
@@ -175,6 +209,14 @@ class MachineManager:
         return selected
 
     def release_machine(self, serial: str) -> bool:
+        """Release the machine with the corresponding serial number
+
+        Args:
+            serial (str): The serial number for the machine
+
+        Returns:
+            bool: True if the machine is successfully released, False otherwise.
+        """
         machine = self._machines.get(serial)
         if not machine:
             logger.warning(
@@ -198,4 +240,12 @@ class MachineManager:
         return True
 
     def get_machine_by_serial(self, serial: str) -> Optional[Machine]:
+        """Retrieve a machine by its serial number.
+
+        Args:
+            serial (str): The serial number of the machine.
+
+        Returns:
+            Optional[Machine]: The machine if found, None otherwise.
+        """
         return self._machines.get(serial)

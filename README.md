@@ -24,7 +24,6 @@ A FastAPI-based service for reserving and tracking switch testbed machines.
   "ip": "192.168.2.1",
   "port": 7001,
   "serial": "n9kSerial1",
-  "available": true,
   "status": "available" // 或 "unavailable", "unreachable"
 }
 ```
@@ -73,9 +72,6 @@ SSH 密碼驗證需要 `sshpass` 工具:
 ```bash
 # Ubuntu/Debian
 sudo apt-get install sshpass
-
-# macOS
-brew install sshpass
 ```
 
 ### 3. 安裝 Python 套件並啟動

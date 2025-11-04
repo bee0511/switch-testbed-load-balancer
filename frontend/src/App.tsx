@@ -28,7 +28,7 @@ function MachineCard({ machine }: { machine: Machine }) {
         </div>
         <div>
           <dt>IP</dt>
-          <dd>{machine.ip}</dd>
+          <dd>{machine.mgmt_ip}</dd>
         </div>
         <div>
           <dt>Port</dt>

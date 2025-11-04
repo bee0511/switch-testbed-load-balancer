@@ -48,7 +48,7 @@ class Validator:
         """
         try:
             result = subprocess.run(
-                ["ping", "-c", "1", "-W", "1", machine.ip],
+                ["ping", "-c", "1", "-W", "1", machine.mgmt_ip],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
@@ -58,7 +58,7 @@ class Validator:
             logger.error(
                 "Error while pinging machine %s (%s): %s",
                 machine.serial,
-                machine.ip,
+                machine.mgmt_ip,
                 e,
             )
             return False
@@ -166,7 +166,7 @@ class Validator:
         if machine.vendor.lower() == "cisco" and machine.model.lower() == "xrv":
             # 單一命令: 直接執行 (適合 IOS-XR)
             cmd = ["sshpass", "-p", password, "ssh", *ssh_opts,
-                   f"{username}@{machine.ip}", commands[0]]
+                   f"{username}@{machine.mgmt_ip}", commands[0]]
 
             result = subprocess.run(
                 cmd,
@@ -179,7 +179,7 @@ class Validator:
             # 多個命令: 用 -tt + stdin (傳統方式)
             ssh_opts.append("-tt")
             cmd = ["sshpass", "-p", password, "ssh",
-                   *ssh_opts, f"{username}@{machine.ip}"]
+                   *ssh_opts, f"{username}@{machine.mgmt_ip}"]
             input_text = "\n".join(commands + [""])
 
             result = subprocess.run(
@@ -227,7 +227,7 @@ class Validator:
 
         if not got_u:
             logger.warning("No serial parsed from %s (%s). Raw:\n%s",
-                           machine.ip, key, out[:4000])
+                           machine.mgmt_ip, key, out[:4000])
             return False
 
         if got_u == exp:
@@ -235,7 +235,7 @@ class Validator:
 
         logger.warning(
             "Serial mismatch for %s (%s): expected=%s got=%s",
-            machine.ip, key, exp, got_u
+            machine.mgmt_ip, key, exp, got_u
         )
         return False
 
@@ -249,9 +249,12 @@ if __name__ == "__main__":
         has_entries = True
         for dev in version_entry.get("devices", []):
             try:
-                ip = str(dev["ip"])
+                mgmt_ip = str(dev["mgmt_ip"])
                 port = int(dev["port"])
                 serial = str(dev["serial_number"])
+                default_gateway = str(dev["default_gateway"])
+                hostname = str(dev["hostname"])
+                netmask = str(dev["netmask"])
             except (KeyError, TypeError, ValueError) as error:
                 logger.error(
                     "Bad device entry under %s/%s/%s: %s (%s)",
@@ -272,15 +275,18 @@ if __name__ == "__main__":
                 vendor=vendor,
                 model=model,
                 version=version,
-                ip=ip,
+                mgmt_ip=mgmt_ip,
                 port=port,
                 serial=serial,
+                hostname=hostname,
+                default_gateway=default_gateway,
+                netmask=netmask,
             )
     validator = Validator(machines)
     # print(machines)
     for machine in machines.values():
         reachable = validator.validate_machine_reachability(machine)
-        print(f"Ping {machine.serial} ({machine.ip}): reachable={reachable}")
+        print(f"Ping {machine.serial} ({machine.mgmt_ip}): reachable={reachable}")
         if reachable:
             serial_ok = validator.check_serial(machine)
             print(f"  Serial check: {serial_ok}")

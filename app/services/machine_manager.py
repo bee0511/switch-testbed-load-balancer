@@ -31,9 +31,12 @@ class MachineManager:
             has_entries = True
             for dev in version_entry.get("devices", []):
                 try:
-                    ip = str(dev["ip"])
+                    mgmt_ip = str(dev["mgmt_ip"])
                     port = int(dev["port"])
                     serial = str(dev["serial_number"])
+                    hostname = str(dev["hostname"])
+                    default_gateway = str(dev["default_gateway"])
+                    netmask = str(dev["netmask"])
                 except (KeyError, TypeError, ValueError) as error:
                     logger.error(
                         "Bad device entry under %s/%s/%s: %s (%s)",
@@ -53,9 +56,12 @@ class MachineManager:
                     vendor=vendor,
                     model=model,
                     version=version,
-                    ip=ip,
+                    mgmt_ip=mgmt_ip,
                     port=port,
                     serial=serial,
+                    hostname=hostname,
+                    default_gateway=default_gateway,
+                    netmask=netmask,
                 )
                 machines[serial] = machine
         if not has_entries:
@@ -231,7 +237,7 @@ class MachineManager:
             logger.error(
                 "Cannot release machine %s (%s): unreachable.",
                 machine.serial,
-                machine.ip,
+                machine.mgmt_ip,
             )
             return False
 

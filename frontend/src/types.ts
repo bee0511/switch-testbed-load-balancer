@@ -4,7 +4,7 @@ export interface Machine {
   vendor: string;
   model: string;
   version: string;
-  ip: string;
+  mgmt_ip: string;
   port: number;
   serial: string;
   status: MachineStatus;

@@ -6,9 +6,12 @@ class Machine:
     vendor: str
     model: str
     version: str
-    ip: str
+    mgmt_ip: str
     port: int
     serial: str
+    hostname: str
+    default_gateway: str
+    netmask: str
     status: str = "available"
 
     def to_dict(self) -> dict:

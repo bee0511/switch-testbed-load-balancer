@@ -5,41 +5,65 @@ vendors:
         versions:
           - version: "17.09.05e"
             devices:
-              - ip: 10.192.4.181
+              - mgmt_ip: 10.192.4.181
                 port: 22
                 serial_number: 97SQ3QZXPHF
-              - ip: 10.192.4.182
+                hostname: switch1
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
+              - mgmt_ip: 10.192.4.182
                 port: 22
                 serial_number: 9EET8R3N8UN
+                hostname: switch2
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
       - model: n9k
         versions:
           - version: "9.3(13)"
             devices:
-              - ip: 10.192.4.183
+              - mgmt_ip: 10.192.4.183
                 port: 22
                 serial_number: 9XHJVKZ7XMR
-              - ip: 10.192.4.184
+                hostname: switch3
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
+              - mgmt_ip: 10.192.4.184
                 port: 22
                 serial_number: 934GG1QCI6D
+                hostname: switch4
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
       - model: xrv
         versions:
           - version: "7.4.2"
             devices:
-              - ip: 10.192.4.185
+              - mgmt_ip: 10.192.4.185
                 port: 22
                 serial_number: A0552319593
-              - ip: 10.192.4.186
+                hostname: switch5
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
+              - mgmt_ip: 10.192.4.186
                 port: 22
                 serial_number: 79CED161094
+                hostname: switch6
+                default_gateway: 10.192.4.1
+                netmask: 255.255.255.0
   - vendor: hp
     models:
       - model: "5945"
         versions:
           - version: "7.1.070"
             devices:
-              - ip: 10.192.197.201
+              - mgmt_ip: 10.192.197.201
                 port: 22
                 serial_number: SERIAL_123
-              - ip: 10.192.197.202
+                hostname: hp-switch1
+                default_gateway: 10.192.197.1
+                netmask: 255.255.255.0
+              - mgmt_ip: 10.192.197.202
                 port: 22
                 serial_number: CN2AK8302P
+                hostname: hp-switch2
+                default_gateway: 10.192.197.1
+                netmask: 255.255.255.0

@@ -1,9 +1,12 @@
 from typing import List, TypedDict
 
 class DeviceEntry(TypedDict):
-    ip: str
+    mgmt_ip: str
     port: int
     serial_number: str
+    hostname: str
+    default_gateway: str
+    netmask: str
 
 class VersionEntry(TypedDict):
     version: str

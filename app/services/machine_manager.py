@@ -204,6 +204,8 @@ class MachineManager:
                 model,
                 version,
             )
+            if self._validator.reset_machine(selected):
+                logger.info("Reset machine %s successfully.", selected.serial)
         else:
             logger.warning(
                 "No reachable and valid machines for %s/%s/%s",

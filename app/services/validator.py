@@ -239,6 +239,55 @@ class Validator:
         )
         return False
 
+    def reset_machine(self, machine: Machine) -> bool:
+        """Reset the machine by 
+        - copy initial.cfg startup.cfg
+        - reload
+
+        Args:
+            machine (Machine): The machine to reset
+
+        Returns:
+            bool: True if the machine is successfully reset, False otherwise.
+        """
+        if machine.serial not in self._machines:
+            logger.warning(
+                "Attempted to reset unknown machine serial=%s", machine.serial)
+            return False
+
+        creds = get_device_credentials(machine.serial)
+        if not creds:
+            logger.error("No credentials for %s, skip.", machine.serial)
+            return False
+        username, password = creds
+        if machine.vendor == "cisco":
+            # 對於 Cisco IOS/IOS-XE,需要處理互動式提示
+            # copy 命令會問: Destination filename [startup.cfg]?
+            # reload 命令會問: Proceed with reload? [confirm]
+            commands = [
+                "copy initial.cfg startup.cfg",
+                "",  # 按 Enter 確認預設檔名
+                "reload",
+                "",
+                "",
+                ""
+            ]
+            out = self._ssh_run(machine, username, password, commands)
+            logger.info("Reset output for %s:\n%s", machine.serial, out)
+
+            # 檢查是否有錯誤
+            if "Error" in out or "Permission denied" in out:
+                logger.error("Failed to reset %s: %s", machine.serial, out)
+                return False
+
+        elif machine.vendor == "hp":
+            logger.info("Reset command for HP not implemented yet.")
+            return False
+        else:
+            logger.error("Unknown vendor for reset: %s", machine.vendor)
+            return False
+        return True
+
 
 if __name__ == "__main__":
     # 測試用
@@ -284,9 +333,9 @@ if __name__ == "__main__":
             )
     validator = Validator(machines)
     # print(machines)
-    for machine in machines.values():
-        reachable = validator.validate_machine_reachability(machine)
-        print(f"Ping {machine.serial} ({machine.mgmt_ip}): reachable={reachable}")
-        if reachable:
-            serial_ok = validator.check_serial(machine)
-            print(f"  Serial check: {serial_ok}")
+    target = machines["97SQ3QZXPHF"]
+    print(f"Validating reachability for {target.serial} ({target.mgmt_ip})...")
+    reachable = validator.validate_machine_reachability(target)
+    print(f"Reachable: {reachable}")
+    if reachable:
+        validator.reset_machine(target)

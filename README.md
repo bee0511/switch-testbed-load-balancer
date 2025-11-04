@@ -10,7 +10,7 @@ A FastAPI-based service for reserving and tracking switch testbed machines.
 | Method | Path | 說明 | 回傳格式 |
 | ------ | ---- | ---- | -------- |
 | `GET` | `/machines` | 取得 device.yaml 中所有機器的即時狀態，可使用 `vendor`、`model`、`version`、`status=available\|unavailable\|unreachable` 等查詢參數。 | **200**: `{ "machines": Machine[] }`。<br>**4xx/5xx**: `{ "detail": "錯誤說明" }`。若無符合條件的機器，`machines` 為空陣列。|
-| `POST` | `/reserve/{vendor}/{model}/{version}` | 將符合條件且目前可用的其中一台機器標記為 `unavailable` 並回傳詳細資訊。| **200**: `Machine`。<br>**404**: `{ "detail": "No available machines for given specification" }`。|
+| `POST` | `/reserve/{vendor}/{model}/{version}` | 將符合條件且目前可用的其中一台機器標記為 `unavailable`，重新設定機器，並回傳詳細資訊。Reload 機器會造成短暫時間無法 ping 到，需要自行做確認是否可以連接。| **200**: `Machine`。<br>**404**: `{ "detail": "No available machines for given specification" }`。|
 | `POST` | `/release/{serial_number}` | 將機器釋放回 `available` 狀態。 | **200**: `{ "machine": Machine }`。<br>**404**: `{ "detail": "Machine not found" }`。|
 
 
@@ -21,10 +21,13 @@ A FastAPI-based service for reserving and tracking switch testbed machines.
   "vendor": "cisco",
   "model": "n9k",
   "version": "9.3",
-  "ip": "192.168.2.1",
+  "mgmt_ip": "192.168.2.1",
   "port": 7001,
   "serial": "n9kSerial1",
-  "status": "available" // 或 "unavailable", "unreachable"
+  "status": "available", // 或 "unavailable", "unreachable"
+  "hostname": "switch1",
+  "default_gateway": "192.168.2.254",
+  "netmask": "255.255.255.0",
 }
 ```
 

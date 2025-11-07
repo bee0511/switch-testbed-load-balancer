@@ -204,8 +204,6 @@ class MachineManager:
                 model,
                 version,
             )
-            if self._validator.reset_machine(selected):
-                logger.info("Reset machine %s successfully.", selected.serial)
         else:
             logger.warning(
                 "No reachable and valid machines for %s/%s/%s",
@@ -240,6 +238,18 @@ class MachineManager:
                 "Cannot release machine %s (%s): unreachable.",
                 machine.serial,
                 machine.mgmt_ip,
+            )
+            return False
+
+        try:
+            if self._validator.reset_machine(machine):
+                logger.info("Reset machine %s successfully.", machine.serial)
+        except Exception as e:
+            logger.error(
+                "Failed to reset machine %s (%s): %s",
+                machine.serial,
+                machine.mgmt_ip,
+                e,
             )
             return False
 

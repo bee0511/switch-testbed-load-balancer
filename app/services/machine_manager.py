@@ -1,9 +1,8 @@
-"""機器管理模組 - 負責機器分配和管理"""
-
 import logging
 from typing import Dict, List, Optional
 
 from app.models.machine import Machine
+from app.services.machine_monitor import MachineMonitor
 from app.services.validator import Validator
 from app.utils import iter_device_entries
 
@@ -17,6 +16,13 @@ class MachineManager:
         self._machines = self._load_machines_from_config()
         self._validator = Validator(self._machines)
         self._process_machine_status()
+        # 初始化並啟動機器監控
+        self._monitor = MachineMonitor(
+            machines=self._machines,
+            check_reachability_func=self._check_reachability,
+            check_interval=10,
+        )
+        self._monitor.start()
 
     def _load_machines_from_config(self) -> Dict[str, Machine]:
         """Load machines from the device configuration.
@@ -221,41 +227,36 @@ class MachineManager:
             serial (str): The serial number for the machine
 
         Returns:
-            bool: True if the machine is successfully released, False otherwise.
+            bool: True if the release process is initiated, False if validation fails.
         """
         machine = self._machines.get(serial)
         if not machine:
-            logger.warning(
+            logger.error(
                 "Attempted to release unknown machine serial=%s", serial)
             return False
 
         if machine.status == "available":
-            logger.warning("Machine %s already available", serial)
+            logger.info("Machine %s is already available", serial)
             return True
-        
-        if not self._check_reachability(machine):
-            logger.error(
-                "Cannot release machine %s (%s): unreachable.",
+
+        if machine.status == "unreachable":
+            logger.warning(
+                "Machine %s (%s) is currently unreachable. Aborting release.",
                 machine.serial,
                 machine.mgmt_ip,
             )
-            return False
+            return True
 
-        try:
-            if self._validator.reset_machine(machine):
-                logger.info("Reset machine %s successfully.", machine.serial)
-        except Exception as e:
-            logger.error(
-                "Failed to reset machine %s (%s): %s",
-                machine.serial,
-                machine.mgmt_ip,
-                e,
+        if self._validator.reset_machine(machine):
+            machine.status = "unreachable"
+            logger.info(
+                "Reset machine %s successfully.",
+                machine.serial
             )
+            return True
+        else:
+            logger.error("Failed to reset machine %s.", machine.serial)
             return False
-
-        machine.status = "available"
-        logger.info("Released machine %s", serial)
-        return True
 
     def get_machine_by_serial(self, serial: str) -> Optional[Machine]:
         """Retrieve a machine by its serial number.
@@ -267,3 +268,4 @@ class MachineManager:
             Optional[Machine]: The machine if found, None otherwise.
         """
         return self._machines.get(serial)
+    

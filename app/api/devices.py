@@ -10,7 +10,8 @@ router = APIRouter()
 def _get_machine_manager(request: Request) -> MachineManager:
     manager = getattr(request.app.state, "machine_manager", None)
     if not manager:
-        raise HTTPException(status_code=500, detail="Machine manager is not initialized")
+        raise HTTPException(
+            status_code=500, detail="Machine manager is not initialized")
     return cast(MachineManager, manager)
 
 
@@ -47,6 +48,7 @@ def list_machines(
         "machines": machines,
     }
 
+
 @router.post("/reserve/{vendor}/{model}/{version}")
 def reserve_available_machines(
     vendor: str,
@@ -59,19 +61,27 @@ def reserve_available_machines(
     manager = _get_machine_manager(request)
     reserved = manager.reserve_machines(vendor, model, version)
     if not reserved:
-        raise HTTPException(status_code=404, detail="No available machines for given specification")
+        raise HTTPException(
+            status_code=404, detail="No available machines for given specification")
 
     return reserved.to_dict()
 
 
 @router.post("/release/{serial_number}")
 def release_machine(serial_number: str, request: Request) -> dict:
-    """Release a previously reserved machine."""
+    """Release a previously reserved machine (asynchronous reset)."""
 
     manager = _get_machine_manager(request)
     machine = manager.get_machine_by_serial(serial_number)
     if not machine:
         raise HTTPException(status_code=404, detail="Machine not found")
-    manager.release_machine(serial_number)
+
+    success = manager.release_machine(serial_number)
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to initiate machine release")
+
     refreshed = manager.get_machine_by_serial(serial_number)
-    return {"machine": refreshed.to_dict() if refreshed else None}
+    return {
+        "machine": refreshed.to_dict() if refreshed else None
+    }

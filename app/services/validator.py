@@ -141,7 +141,7 @@ class Validator:
             return (m.group(2) if last >= 2 else m.group(1)).strip()
         return ""
 
-    def _ssh_run(self, machine: Machine, username: str, password: str, commands: list[str]) -> str:
+    def _ssh_run(self, machine: Machine, username: str, password: str, commands: list[str], timeout: int = 10) -> str:
         """Execute the commands by using SSH to the machine
 
         Args:
@@ -149,6 +149,7 @@ class Validator:
             username (str): The SSH username
             password (str): The SSH password
             commands (list[str]): The list of commands to execute
+            timeout (int): Timeout in seconds for the SSH command
 
         Returns:
             str: The output from the SSH command execution
@@ -173,7 +174,7 @@ class Validator:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                timeout=10,
+                timeout=timeout,
             )
         else:
             # 多個命令: 用 -tt + stdin (傳統方式)
@@ -188,7 +189,7 @@ class Validator:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                timeout=10,
+                timeout=timeout,
             )
 
         if result.returncode != 0:
@@ -261,23 +262,26 @@ class Validator:
             return False
         username, password = creds
         if machine.vendor == "cisco":
-            # 對於 Cisco IOS/IOS-XE,需要處理互動式提示
-            # copy 命令會問: Destination filename [startup.cfg]?
-            # reload 命令會問: Proceed with reload? [confirm]
             commands = [
                 "copy initial.cfg startup.cfg",
                 "",  # 按 Enter 確認預設檔名
                 "reload",
-                "",
-                "",
+                "yes",
                 ""
             ]
-            out = self._ssh_run(machine, username, password, commands)
-            logger.info("Reset output for %s:\n%s", machine.serial, out)
+            try:
+                out = self._ssh_run(machine, username,
+                                    password, commands, timeout=10)
+                logger.info("Reset output for %s:\n%s", machine.serial, out)
 
-            # 檢查是否有錯誤
-            if "Error" in out or "Permission denied" in out:
-                logger.error("Failed to reset %s: %s", machine.serial, out)
+                # 檢查是否有錯誤
+                if "Error" in out or "Permission denied" in out:
+                    logger.error(
+                        "Failed to reset %s: found errors in output", machine.serial)
+                    return True
+            except Exception as e:
+                logger.error(
+                    "Exception while resetting machine %s: %s", machine.serial, e)
                 return False
 
         elif machine.vendor == "hp":

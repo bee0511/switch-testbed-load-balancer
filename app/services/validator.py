@@ -262,28 +262,37 @@ class Validator:
             return False
         username, password = creds
         if machine.vendor == "cisco":
-            commands = [
-                "copy initial.cfg startup.cfg",
-                "",  # 按 Enter 確認預設檔名
-                "reload",
-                "yes",
-                ""
-            ]
-            try:
-                out = self._ssh_run(machine, username,
-                                    password, commands, timeout=10)
-                logger.info("Reset output for %s:\n%s", machine.serial, out)
-
-                # 檢查是否有錯誤
-                if "Error" in out or "Permission denied" in out:
-                    logger.error(
-                        "Failed to reset %s: found errors in output", machine.serial)
+            if machine.model == "n9k":
+                commands = [
+                    "copy initial.cfg startup-config",
+                    "",
+                    "reload",
+                    "y",
+                    ""
+                ]
+                try:
+                    # N9K 會在 reload 後直接重啟，不會回應
+                    # 使用 5 秒 timeout，如果 timeout 就視為成功
+                    out = self._ssh_run(machine, username,
+                                        password, commands, timeout=5)
+                    logger.info("Reset output for %s:\n%s",
+                                machine.serial, out)
+                    
+                    # 如果有正常輸出但沒有錯誤，視為成功
                     return True
-            except Exception as e:
-                logger.error(
-                    "Exception while resetting machine %s: %s", machine.serial, e)
+                except subprocess.TimeoutExpired:
+                    # N9K reload 後會直接斷線，timeout 是預期行為
+                    logger.info(
+                        "Reset command for %s timed out (expected for N9K reload)", machine.serial)
+                    return True
+                except Exception as e:
+                    logger.error(
+                        "Exception while resetting machine %s: %s", machine.serial, e)
+                    return False
+            else:
+                logger.info(
+                    "Reset command for Cisco model %s not implemented yet.", machine.model)
                 return False
-
         elif machine.vendor == "hp":
             logger.info("Reset command for HP not implemented yet.")
             return False

@@ -3,9 +3,9 @@ set -euo pipefail
 
 BASE="${DISPATCH_BASE:-http://127.0.0.1:8000}"
 
-VERSION="${1:-"17.09.05e"}"
+VERSION="${1:-"9.3(13)"}"
 VENDOR="${2:-cisco}"
-MODULE="${3:-c8k}"
+MODULE="${3:-n9k}"
 RESP="$(curl -sS -X POST "$BASE/reserve/$VENDOR/$MODULE/$VERSION")"
 
 echo "$RESP" | jq '.'

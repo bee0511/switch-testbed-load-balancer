@@ -168,7 +168,7 @@ class MachineManager:
             if status is not None and machine.status != status:
                 continue
             results.append(machine)
-
+            
         return results
 
     def reserve_machines(

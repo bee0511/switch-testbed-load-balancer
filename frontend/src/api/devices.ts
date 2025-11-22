@@ -1,6 +1,19 @@
 import type { Machine, MachineListResponse } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://10.192.194.121:8000";
+// 定義一個 interface 來擴充 window 物件
+declare global {
+  interface Window {
+    __RUNTIME_CONFIG__?: {
+      VITE_API_BASE_URL: string;
+    };
+  }
+}
+
+// 優先讀取 window.__RUNTIME_CONFIG__，如果沒有才讀取 Vite 環境變數，最後是 localhost
+const API_BASE_URL = 
+  window.__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
+  import.meta.env.VITE_API_BASE_URL || 
+  "http://localhost:8000";
 
 export async function fetchMachines(): Promise<Machine[]> {
   const response = await fetch(`${API_BASE_URL}/machines`);

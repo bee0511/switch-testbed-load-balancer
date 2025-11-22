@@ -1,42 +1,46 @@
-# 多階段建置：建置階段
+# --- 建置階段 ---
 FROM node:18-slim AS builder
 
-# 設定工作目錄
 WORKDIR /app
 
-# 設定 npm 配置以加速安裝
+# 設定 npm 參數
 RUN npm config set registry https://registry.npmmirror.com/ && \
     npm config set fund false && \
-    npm config set audit false && \
-    npm config set progress false
+    npm config set audit false
 
-# 只複製 package 相關檔案以利用 Docker 快取層
-COPY frontend/package.json frontend/package-lock.json* ./
+# 1. 先複製依賴定義
+COPY package.json package-lock.json* ./
 
-RUN npm cache clean --force && \
-    rm -rf node_modules package-lock.json && \
-    npm install --silent --no-fund --no-audit
-    
-# 複製其餘的前端原始碼
-COPY frontend/ .
+# 2. 安裝依賴
+RUN npm ci --silent
 
-# 設定 API 基礎 URL
-ENV VITE_API_BASE_URL="http://10.192.194.121:8000"
+# 3. 複製原始碼
+COPY . .
 
-# 建置應用程式
+# 4. 接收 Build Argument (這是關鍵修改)
+# 預設值可以是 localhost，但在 docker-compose 中我們會覆寫它
+ARG VITE_API_BASE_URL=http://localhost:8000
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+# 5. 建置 (這時候 Vite 會把 ENV 的值寫死進 JS 檔案)
 RUN npm run build
 
-# 生產階段：使用 nginx 提供靜態檔案服務
+# --- 生產階段 ---
 FROM nginx:alpine
 
-# 複製建置好的檔案到 nginx 目錄
-COPY --from=builder /app/dist /usr/share/nginx/html
+# 安裝 shell (alpine 預設有 sh，但為了保險)
+RUN apk add --no-cache bash
 
-# 複製 nginx 設定檔案
+# 複製建置成果
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY frontend/nginx.conf /etc/nginx/nginx.conf
 
-# 暴露端口
+# 複製並設定 entrypoint 腳本
+COPY frontend/entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 EXPOSE 80
 
-# 啟動 nginx
+# 設定 Entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

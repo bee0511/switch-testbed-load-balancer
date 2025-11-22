@@ -1,18 +1,42 @@
 import logging
-
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 
-from app.api.devices import router as devices_router
-from app.services.logging_config import setup_logging
-from app.services.machine_manager import MachineManager
+from app.api.routers import machines
+from app.core.logging import setup_logging
+from app.api.deps import get_machine_manager
+from app.services.machine_monitor import monitor_machines
 
 setup_logging()
 logger = logging.getLogger("app.main")
 
-machine_manager = MachineManager()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    manager = get_machine_manager()
+    await manager.initialize_status() # 啟動時檢查一次
+    
+    # 啟動背景監控
+    monitor_task = asyncio.create_task(monitor_machines(manager))
+    
+    yield
+    
+    # Shutdown
+    monitor_task.cancel()
+    try:
+        await monitor_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Shutdown complete.")
 
-app = FastAPI(title="Switch Testbed Load Balancer", version="2.0.0")
+app = FastAPI(
+    title="Switch Testbed Load Balancer", 
+    version="2.0.0",
+    lifespan=lifespan
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,14 +44,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.state.machine_manager = machine_manager
 
-app.include_router(devices_router, tags=["machines"])
-
+app.include_router(machines.router, tags=["machines"])
 
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
-
-
-logger.info("Switch Testbed Load Balancer application initialized.")

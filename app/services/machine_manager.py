@@ -1,271 +1,117 @@
 import logging
 from typing import Dict, List, Optional
+import asyncio
 
-from app.models.machine import Machine
-from app.services.machine_monitor import MachineMonitor
-from app.services.validator import Validator
-from app.utils import iter_device_entries
+from app.core.config import get_settings
+from app.models.machine import Machine, MachineStatus, ReleaseResult
+from app.services.device_connector import DeviceConnector
 
-logger = logging.getLogger("machine_manager")
+logger = logging.getLogger(__name__)
 
 
 class MachineManager:
-    """Manages the allocation and status of machines."""
+    def __init__(self):
+        self.connector = DeviceConnector()
+        self._machines: Dict[str, Machine] = {}
+        self._load_machines()
+        self._lock = asyncio.Lock()  # 用於並發安全
 
-    def __init__(self) -> None:
-        self._machines = self._load_machines_from_config()
-        self._validator = Validator(self._machines)
-        self._process_machine_status()
-        # 初始化並啟動機器監控
-        self._monitor = MachineMonitor(
-            machines=self._machines,
-            check_reachability_func=self._check_reachability,
-            check_interval=10,
-        )
-        self._monitor.start()
+    def _load_machines(self):
+        config = get_settings().load_device_config()
+        for vendor_entry in config.get("vendors", []):
+            vendor = vendor_entry["vendor"]
+            for model_entry in vendor_entry.get("models", []):
+                model = model_entry["model"]
+                for ver_entry in model_entry.get("versions", []):
+                    version = ver_entry["version"]
+                    for dev in ver_entry.get("devices", []):
+                        m = Machine(
+                            vendor=vendor, model=model, version=version,
+                            mgmt_ip=str(dev["mgmt_ip"]),
+                            port=dev.get("port", 22),
+                            serial=str(dev["serial_number"]),
+                            hostname=dev.get("hostname", ""),
+                            default_gateway=dev.get("default_gateway"),
+                            netmask=dev.get("netmask")
+                        )
+                        self._machines[m.serial] = m
+        logger.info(f"Loaded {len(self._machines)} machines.")
 
-    def _load_machines_from_config(self) -> Dict[str, Machine]:
-        """Load machines from the device configuration.
+    async def initialize_status(self):
+        """啟動時並行檢查所有機器狀態"""
+        logger.info("Initializing machine statuses...")
+        tasks = [self.refresh_machine_status(m)
+                 for m in self._machines.values()]
+        await asyncio.gather(*tasks)
 
-        Returns:
-            Dict[str, Machine]: A dictionary of machines indexed by their serial numbers.
-        """
-        machines: Dict[str, Machine] = {}
+    async def refresh_machine_status(self, machine: Machine):
+        """更新單台機器狀態 (Ping + Serial Check)"""
+        if not await self.connector.is_reachable(machine.mgmt_ip):
+            machine.status = MachineStatus.UNREACHABLE
+            return
 
-        has_entries = False
-        for vendor, model, version, version_entry in iter_device_entries():
-            has_entries = True
-            for dev in version_entry.get("devices", []):
-                try:
-                    mgmt_ip = str(dev["mgmt_ip"])
-                    port = int(dev["port"])
-                    serial = str(dev["serial_number"])
-                    hostname = str(dev["hostname"])
-                    default_gateway = str(dev["default_gateway"])
-                    netmask = str(dev["netmask"])
-                except (KeyError, TypeError, ValueError) as error:
-                    logger.error(
-                        "Bad device entry under %s/%s/%s: %s (%s)",
-                        vendor,
-                        model,
-                        version,
-                        dev,
-                        error,
-                    )
-                    continue
-
-                if serial in machines:
-                    logger.warning(
-                        "Duplicate serial '%s' found; overriding previous entry.", serial
-                    )
-                machine = Machine(
-                    vendor=vendor,
-                    model=model,
-                    version=version,
-                    mgmt_ip=mgmt_ip,
-                    port=port,
-                    serial=serial,
-                    hostname=hostname,
-                    default_gateway=default_gateway,
-                    netmask=netmask,
-                )
-                machines[serial] = machine
-        if not has_entries:
-            logger.warning("No valid machines found in config.")
-
-        return machines
-
-    def _process_machine_status(self) -> None:
-        """Process the status of each machine."""
-        for machine in self._machines.values():
-            self._check_specific_machine_status(machine)
-
-    def _check_specific_machine_status(self, machine: Machine) -> bool:
-        """Check the status of a specific machine.
-
-        Args:
-            machine (Machine): The machine to check.
-
-        Returns:
-            bool: True if the machine is reachable and has a valid serial, False otherwise.
-        """
-        if not self._check_reachability(machine):
-            machine.status = "unreachable"
-            return False
-        elif not self._check_serial(machine):
-            machine.status = "unavailable"
-            return False
+        # Check the serial via SSH
+        serial = await self.connector.get_serial_via_ssh(machine)
+        if serial == machine.serial:
+            machine.status = MachineStatus.AVAILABLE
+            logger.info(f"Machine {machine.serial} is AVAILABLE.")
         else:
-            machine.status = "available"
-        return True
+            machine.status = MachineStatus.UNAVAILABLE
+            logger.warning(f"Machine {machine.serial} marked as UNAVAILABLE due to serial mismatch. (Expected: {machine.serial}, Got: {serial})")
 
-    def _matches(self, machine: Machine, vendor: str, model: str, version: str) -> bool:
-        """Check whether the machine matches the given criteria.
-
-        Args:
-            machine (Machine): the machine to check.
-            vendor (str): the vendor to match.
-            model (str): the model to match.
-            version (str): the version to match.
-
-        Returns:
-            bool: True if the machine matches the criteria, False otherwise.
-        """
-        return (
-            machine.vendor == vendor
-            and machine.model == model
-            and machine.version == version
-        )
-
-    def _check_reachability(self, machine: Machine) -> bool:
-        """Check whether the machine is reachable.
-
-        Args:
-            machine (Machine): The machine to check.
-
-        Returns:
-            bool: True if the machine is reachable, False otherwise.
-        """
-        return self._validator.validate_machine_reachability(machine)
-
-    def _check_serial(self, machine: Machine) -> bool:
-        """Check whether the machine's serial number is valid.
-        Args:
-            machine (Machine): The machine to check.
-
-        Returns:
-            bool: True if the machine's serial number is valid, False otherwise.
-        """
-        return self._validator.check_serial(machine)
-
-    def list_machines(
-        self,
-        vendor: str | None = None,
-        model: str | None = None,
-        version: str | None = None,
-        status: str | None = None,
-    ) -> List[Machine]:
-        """
-        List machines filtered by the given criteria.
-        Args:
-            vendor (str | None): Vendor identifier from device.yaml.
-            model (str | None): Model identifier.
-            version (str | None): Version string.
-            status (str | None): Machine status filter (available/unavailable/unreachable).
-        Returns:
-            List[Machine]: List of machines matching the criteria.
-        """
-
-        results: List[Machine] = []
-        for machine in self._machines.values():
-            if not self._matches(
-                machine,
-                vendor if vendor is not None else machine.vendor,
-                model if model is not None else machine.model,
-                version if version is not None else machine.version,
-            ):
-                continue
-            if status is not None and machine.status != status:
-                continue
-            results.append(machine)
-            
-        return results
-
-    def reserve_machines(
-        self, vendor: str, model: str, version: str
-    ) -> Machine | None:
-        """Reserve available machines that match the given spec.
-
-        Args:
-            vendor: Vendor identifier from device.yaml.
-            model: Model identifier.
-            version: Version string.
-        Returns:
-            Machine | None: reserved machine. The machine is flagged unavailable immediately.
-        """
-        available_candidates = [
-            machine
-            for machine in self._machines.values()
-            if machine.status == "available"
-            and self._matches(machine, vendor, model, version)
+    def get_machines(self, vendor: Optional[str] = None, model: Optional[str] = None, version: Optional[str] = None, status: Optional[str] = None) -> List[Machine]:
+        """過濾機器列表"""
+        return [
+            m for m in self._machines.values()
+            if (not vendor or m.vendor == vendor)
+            and (not model or m.model == model)
+            and (not version or m.version == version)
+            and (not status or m.status == status)
         ]
 
-        if not available_candidates:
-            logger.info(
-                "No available machines for %s/%s/%s", vendor, model, version
-            )
+    def get_machine(self, serial: str) -> Optional[Machine]:
+        return self._machines.get(serial)
+
+    async def reserve_machine(self, vendor: str, model: str, version: str) -> Optional[Machine]:
+        async with self._lock:  # 防止 race condition
+            candidates = self.get_machines(
+                vendor, model, version, status=MachineStatus.AVAILABLE)
+
+            for machine in candidates:
+                # 再次確認目前是否真的可連線 (Double check)
+                if await self.connector.is_reachable(machine.mgmt_ip):
+                    machine.status = MachineStatus.UNAVAILABLE
+                    logger.info(f"Reserved machine: {machine.serial}")
+                    return machine
+                else:
+                    machine.status = MachineStatus.UNREACHABLE
+
             return None
 
-        selected = None
-        for candidate in available_candidates:
-            if self._check_specific_machine_status(candidate):
-                selected = candidate
-                break
-        if selected:
-            selected.status = "unavailable"
-            logger.info(
-                "Reserved machine %s for %s/%s/%s",
-                selected.serial,
-                vendor,
-                model,
-                version,
-            )
-        else:
-            logger.warning(
-                "No reachable and valid machines for %s/%s/%s",
-                vendor,
-                model,
-                version,
-            )
-
-        return selected
-
-    def release_machine(self, serial: str) -> bool:
-        """Release the machine with the corresponding serial number
-
-        Args:
-            serial (str): The serial number for the machine
-
-        Returns:
-            bool: True if the release process is initiated, False if validation fails.
+    async def release_machine(self, serial: str) -> ReleaseResult:
         """
-        machine = self._machines.get(serial)
+        釋放機器並執行重置。
+        回傳 ReleaseResult Enum 以便 API 層判斷 HTTP 狀態碼。
+        """
+        machine = self.get_machine(serial)
         if not machine:
-            logger.error(
-                "Attempted to release unknown machine serial=%s", serial)
-            return False
+            return ReleaseResult.NOT_FOUND
+        
+        if machine.status == MachineStatus.AVAILABLE:
+            logger.info(f"Machine {serial} is already available.")
+            return ReleaseResult.ALREADY_AVAILABLE
+        
+        if machine.status == MachineStatus.UNREACHABLE:
+            logger.warning(f"Machine {serial} is unreachable, cannot release via SSH.")
+            return ReleaseResult.UNREACHABLE
 
-        if machine.status == "available":
-            logger.info("Machine %s is already available", serial)
-            return True
-
-        if machine.status == "unreachable":
-            logger.warning(
-                "Machine %s (%s) is currently unreachable. Aborting release.",
-                machine.serial,
-                machine.mgmt_ip,
-            )
-            return True
-
-        if self._validator.reset_machine(machine):
-            machine.status = "unreachable"
-            logger.info(
-                "Reset machine %s successfully.",
-                machine.serial
-            )
-            return True
+        # 非同步執行重置
+        success = await self.connector.reset_device(machine)
+        
+        if success:
+            machine.status = MachineStatus.UNREACHABLE
+            logger.info(f"Machine {serial} reset initiated.")
+            return ReleaseResult.SUCCESS
         else:
-            logger.error("Failed to reset machine %s.", machine.serial)
-            return False
-
-    def get_machine_by_serial(self, serial: str) -> Optional[Machine]:
-        """Retrieve a machine by its serial number.
-
-        Args:
-            serial (str): The serial number of the machine.
-
-        Returns:
-            Optional[Machine]: The machine if found, None otherwise.
-        """
-        return self._machines.get(serial)
-    
+            logger.error(f"Failed to release/reset {serial}")
+            return ReleaseResult.FAILED

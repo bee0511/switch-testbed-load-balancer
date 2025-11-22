@@ -6,10 +6,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./logs:/app/logs
-      - ./device.yaml:/app/device.yaml
-      # 注意：確保你有 credentials.yaml，否則掛載會失敗或變成目錄
-      - ./credentials.yaml:/app/credentials.yaml
+      - ./backend/logs:/app/logs
+      - ./backend/config:/app/config
     cap_add:
       - NET_RAW
     healthcheck:

@@ -23,18 +23,18 @@
 
 ### 1. 準備設定檔
 
-在啟動前，您需要建立設備清單與登入憑證：
+在啟動前，您需要建立設備清單與登入憑證（檔案位於 `backend/config/` 目錄下）：
 
 ```bash
 # 1. 複製憑證範本
-cp credentials.yaml.example credentials.yaml
+cp backend/config/credentials.yaml.example backend/config/credentials.yaml
 
-# 2. 編輯 credentials.yaml 填入設備的 SSH帳號密碼
+# 2. 編輯 credentials.yaml 填入設備的 SSH 帳號密碼
 # (此檔案已被 gitignore，請放心填寫)
-nano credentials.yaml
+nano backend/config/credentials.yaml
 
 # 3. 確認 device.yaml 中定義了您的設備清單
-nano device.yaml
+nano backend/config/device.yaml
 ```
 
 ### 2. 啟動服務
@@ -73,10 +73,10 @@ sudo docker compose up -d
 
 修改後，只需執行 `sudo docker compose up -d` 即可生效。
 
-### 新增/修改設備
+設定檔位於 **`backend/config/`** 目錄下：
 
-  - **`device.yaml`**：定義設備的靜態資訊 (IP, Port, Serial, Model)。
-  - **`credentials.yaml`**：定義設備的 SSH 登入資訊。
+  - **`backend/config/device.yaml`**：定義設備的靜態資訊 (IP, Port, Serial, Model)。
+  - **`backend/config/credentials.yaml`**：定義設備的 SSH 登入資訊。
       - 系統會優先匹配 `serial_number`。
       - 若找不到特定序號的憑證，會使用 `default` 區塊的帳密。
 
@@ -88,9 +88,11 @@ sudo docker compose up -d
 
 ### 後端 (Backend)
 
-使用 [uv](https://github.com/astral-sh/uv) 進行極速的依賴管理。
+使用 [uv](https://github.com/astral-sh/uv) 進行極速的依賴管理。請先進入 `backend` 目錄：
 
 ```bash
+cd backend
+
 # 安裝依賴
 uv sync
 

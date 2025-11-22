@@ -5,13 +5,13 @@ FROM python:3.11-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # 設定環境變數
-# PYTHONUNBUFFERED: 讓 log 直接輸出
-# UV_COMPILE_BYTECODE: 編譯 bytecode 加快啟動
+# 新增 CONFIG_DIR 指向容器內的設定檔路徑
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_PROJECT_ENVIRONMENT="/app/.venv" \
     PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    CONFIG_DIR="/app/config"
 
 WORKDIR /app
 
@@ -26,16 +26,16 @@ RUN apt-get update && apt-get install -y \
 COPY pyproject.toml uv.lock ./
 
 # 2. 安裝依賴 (不包含專案本身，只安裝 packages)
-# --frozen: 嚴格依照 lock file
-# --no-install-project: 目前只安裝依賴
 RUN uv sync --frozen --no-install-project --no-dev
 
-# 3. 複製其餘程式碼
+# 3. 複製程式碼與設定檔
 COPY app/ ./app/
-COPY credentials.yaml.example ./credentials.yaml.example 
-# 注意：credentials.yaml 和 device.yaml 通常透過 volume 掛載，不建議 copy 進去
+COPY config/ ./config/
 
-# 4. 安裝專案本身 (如果有定義 entry points) 或單純同步環境
+# [安全措施] 強制刪除可能不小心被 COPY 進來的真實憑證檔
+RUN rm -f ./config/credentials.yaml
+
+# 4. 安裝專案本身
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8000
@@ -44,5 +44,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# 啟動命令 (使用 list 格式)
+# 啟動命令
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

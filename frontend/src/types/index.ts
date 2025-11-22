@@ -8,6 +8,9 @@ export interface Machine {
   port: number;
   serial: string;
   status: MachineStatus;
+  hostname: string;
+  default_gateway?: string;
+  netmask?: string;
 }
 
 export interface MachineListResponse {
@@ -18,5 +21,5 @@ export interface MachineFilters {
   vendor?: string;
   model?: string;
   version?: string;
-  status?: "available" | "unavailable" | "unreachable" | "all";
+  status: MachineStatus | "all";
 }

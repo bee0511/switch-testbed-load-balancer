@@ -1,10 +1,13 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.services.machine_manager import MachineManager
 from app.api.deps import get_machine_manager
 from app.models.machine import Machine, ReleaseResponse, ReleaseResult
 
+import logging
+
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.get("/machines", response_model=dict)
 def list_machines(
@@ -72,3 +75,18 @@ async def release_machine(
     
     # 理論上不會跑到這裡
     raise HTTPException(status_code=500, detail="Unknown error")
+
+@router.post("/admin/reload", status_code=status.HTTP_200_OK)
+async def reload_configuration(
+    manager: MachineManager = Depends(get_machine_manager),
+):
+    """
+    觸發後端重新讀取 device.yaml。
+    會保留目前被借用機器的狀態，並更新新增/移除的機器。
+    """
+    try:
+        count = await manager.reload_machines()
+        return {"status": "success", "message": f"Configuration reloaded. Total devices: {count}"}
+    except Exception as e:
+        logger.error(f"Reload failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reload configuration")

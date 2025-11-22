@@ -9,10 +9,22 @@ declare global {
   }
 }
 
-// 優先讀取 window.__RUNTIME_CONFIG__，如果沒有才讀取 Vite 環境變數，最後是 localhost
-const API_BASE_URL = 
-  window.__RUNTIME_CONFIG__?.VITE_API_BASE_URL || 
-  import.meta.env.VITE_API_BASE_URL || 
+// 判斷是否為開發模式 (Vite 內建變數)
+const isDev = import.meta.env.DEV;
+
+// 設定 API URL 的優先權邏輯
+const API_BASE_URL =
+  // 1. 如果是開發模式 (npm run dev)，且 .env 有設定，絕對優先使用 .env
+  //    (這樣可以無視 index.html 裡面的 localhost 預設值)
+  (isDev && import.meta.env.VITE_API_BASE_URL) ||
+  
+  // 2. 如果是生產環境 (Docker)，優先使用 Runtime Config (由 entrypoint.sh 注入)
+  window.__RUNTIME_CONFIG__?.VITE_API_BASE_URL ||
+  
+  // 3. 如果上述都沒有，嘗試使用 Build time 的環境變數
+  import.meta.env.VITE_API_BASE_URL ||
+  
+  // 4. 最後的備案
   "http://localhost:8000";
 
 export async function fetchMachines(): Promise<Machine[]> {

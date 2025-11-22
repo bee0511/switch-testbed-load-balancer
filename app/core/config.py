@@ -1,6 +1,5 @@
 import yaml
 from pathlib import Path
-from functools import lru_cache
 from typing import Dict, Any, Tuple
 import logging
 
@@ -12,18 +11,22 @@ class Settings:
     CREDENTIALS_PATH: Path = BASE_DIR / "credentials.yaml"
 
     def load_device_config(self) -> Dict[str, Any]:
+        """
+        載入 device.yaml。
+        每次呼叫都會重新讀取檔案，以支援動態更新。
+        """
         try:
             with open(self.DEVICE_CONFIG_PATH, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-                # 確保回傳的一定是字典，避免 yaml 格式錯誤或為空時回傳 None/List
-                return data if isinstance(data, dict) else {"vendors": []}
+                # 確保回傳的一定是字典
+                return data if isinstance(data, dict) else {}
         except Exception as e:
             logger.error(f"Failed to load device config: {e}")
-            return {"vendors": []}
+            return {}
 
     def load_credentials(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        載入憑證檔案。
+        載入 credentials.yaml。
         Returns:
             Tuple[credentials_dict, default_dict]
         """
@@ -35,11 +38,9 @@ class Settings:
             with open(self.CREDENTIALS_PATH, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 
-                # 安全性檢查 1: 檔案如果是空的或格式不對，確保 data 是字典
                 if not isinstance(data, dict):
                     data = {}
 
-                # 安全性檢查 2: 取出的值如果是 None (例如 yaml key 存在但為空)，強制轉為 {}
                 creds = data.get("credentials")
                 if not isinstance(creds, dict):
                     creds = {}
@@ -54,6 +55,5 @@ class Settings:
             logger.error(f"Failed to load credentials: {e}")
             return {}, {}
 
-@lru_cache()
 def get_settings() -> Settings:
     return Settings()

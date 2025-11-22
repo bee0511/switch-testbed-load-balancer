@@ -9,13 +9,13 @@ RUN npm config set registry https://registry.npmmirror.com/ && \
     npm config set audit false
 
 # 1. 先複製依賴定義
-COPY frontend/package.json frontend/package-lock.json* ./
+COPY package.json package-lock.json* ./
 
 # 2. 安裝依賴
 RUN npm ci --silent
 
 # 3. 複製原始碼
-COPY frontend/ .
+COPY . .
 
 # 4. 接收 Build Argument (這是關鍵修改)
 # 預設值可以是 localhost，但在 docker-compose 中我們會覆寫它
@@ -33,10 +33,10 @@ RUN apk add --no-cache bash
 
 # 複製建置成果
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY frontend/nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # 複製並設定 entrypoint 腳本
-COPY frontend/entrypoint.sh /docker-entrypoint.sh
+COPY entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 80

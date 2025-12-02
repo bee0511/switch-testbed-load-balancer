@@ -270,6 +270,11 @@
   color: #37474f;
  }
 
+ .status-pill--rebooting {
+  background: rgba(255, 152, 0, 0.15);
+  color: #f57c00;
+}
+
  @media (max-width: 768px) {
  .masthead {
     flex-direction: column;

@@ -6,6 +6,7 @@ class MachineStatus(str, Enum):
     AVAILABLE = "available"
     UNAVAILABLE = "unavailable"
     UNREACHABLE = "unreachable"
+    REBOOTING = "rebooting"
 
 class MachineBase(BaseModel):
     """機器的基本屬性定義"""

@@ -1,4 +1,4 @@
-export type MachineStatus = "available" | "unavailable" | "unreachable";
+export type MachineStatus = "available" | "unavailable" | "unreachable" | "rebooting";
 
 export interface Machine {
   vendor: string;

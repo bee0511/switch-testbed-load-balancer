@@ -63,22 +63,35 @@ class DeviceConnector:
         return self._parse_serial(machine.vendor, machine.model, output)
 
     async def reset_device(self, machine: Machine) -> bool:
-        """重置設備 (非阻塞)"""
+        """重置設備 (非阻塞) - 分兩階段執行以確保 Log 可見"""
         user, password = self._get_auth(machine.serial)
         
         if machine.vendor == "cisco" and machine.model == "n9k":
-            commands = ["copy initial.cfg startup-config", "", "reload", "y", ""]
+            restore_cmds = ["copy initial.cfg startup-config", "", "exit"]
+            
+            try:
+                output = await asyncio.to_thread(
+                    self._ssh_exec, machine, user, password, restore_cmds
+                )
+                logger.info(f"[{machine.serial}] Restore Config Output:\n{output}")
+                
+            except Exception as e:
+                logger.error(f"[{machine.serial}] Failed to restore config: {e}")
+                return False
+
+            reload_cmds = ["reload", "y", ""]
             
             # N9K reload 會導致連線中斷，這是預期的
             try:
                 await asyncio.to_thread(
-                    self._ssh_exec, machine, user, password, commands, timeout=3
+                    self._ssh_exec, machine, user, password, reload_cmds, timeout=3
                 )
             except subprocess.TimeoutExpired:
-                logger.info(f"Reset triggered for {machine.serial} (timeout expected)")
+                # 這是成功路徑：因為指令送出後機器重啟，導致 SSH 卡住直到 Timeout
+                logger.info(f"[{machine.serial}] Reload command sent successfully (timeout expected).")
                 return True
             except Exception as e:
-                logger.error(f"Reset failed for {machine.serial}: {e}")
+                logger.error(f"[{machine.serial}] Reload failed: {e}")
                 return False
         else:
             logger.info(f"Reset not implemented for {machine.vendor}/{machine.model}")

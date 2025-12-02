@@ -174,8 +174,8 @@ class MachineManager:
         success = await self.connector.reset_device(machine)
         
         if success:
-            machine.status = MachineStatus.UNREACHABLE
-            logger.info(f"Machine {serial} reset initiated.")
+            machine.status = MachineStatus.REBOOTING
+            logger.info(f"Machine {serial} reset initiated. Status set to REBOOTING.")
             return ReleaseResult.SUCCESS
         else:
             logger.error(f"Failed to release/reset {serial}")

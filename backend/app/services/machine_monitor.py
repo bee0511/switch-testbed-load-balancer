@@ -26,6 +26,15 @@ async def monitor_machines(manager: MachineManager):
                 if not await manager.connector.is_reachable(machine.mgmt_ip):
                     logger.info(f"Machine {machine.serial} became unreachable.")
                     machine.status = MachineStatus.UNREACHABLE
+            rebooting = manager.get_machines(status=MachineStatus.REBOOTING)
+            for machine in rebooting:
+                # 如果 Ping 通 -> 代表還在關機過程中，或者剛重啟完還沒死透 -> 保持 REBOOTING 不變，不做任何事
+                # 如果 Ping 不通 -> 代表終於關機成功了 -> 轉為 UNREACHABLE (等待下次啟動被上面的邏輯1捕獲)
+                if not await manager.connector.is_reachable(machine.mgmt_ip):
+                    logger.info(f"Machine {machine.serial} finally went down (Reboot confirmed).")
+                    machine.status = MachineStatus.UNREACHABLE
+                else:
+                    logger.debug(f"Machine {machine.serial} is still rebooting (Pingable)...")
             await asyncio.sleep(INTERVAL)
         except asyncio.CancelledError:
             logger.info("Monitor stopped.")

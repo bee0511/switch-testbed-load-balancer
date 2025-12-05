@@ -71,7 +71,7 @@ class DeviceConnector:
             
             try:
                 output = await asyncio.to_thread(
-                    self._ssh_exec, machine, user, password, restore_cmds
+                    self._ssh_exec, machine, user, password, restore_cmds, timeout=8
                 )
                 logger.info(f"[{machine.serial}] Restore Config Output:\n{output}")
                 
@@ -84,7 +84,7 @@ class DeviceConnector:
             # N9K reload 會導致連線中斷，這是預期的
             try:
                 await asyncio.to_thread(
-                    self._ssh_exec, machine, user, password, reload_cmds, timeout=3
+                    self._ssh_exec, machine, user, password, reload_cmds, timeout=8
                 )
             except subprocess.TimeoutExpired:
                 # 這是成功路徑：因為指令送出後機器重啟，導致 SSH 卡住直到 Timeout

@@ -44,25 +44,10 @@ async def release_machine(
     if result == ReleaseResult.NOT_FOUND:
         raise HTTPException(status_code=404, detail=f"Machine {serial_number} not found")
     
-    elif result == ReleaseResult.UNREACHABLE:
-        # 409 Conflict 通常用於狀態衝突，這裡很適合
-        raise HTTPException(
-            status_code=409, 
-            detail=f"Machine {serial_number} is unreachable and cannot be reset via SSH."
-        )
-    
     elif result == ReleaseResult.FAILED:
         raise HTTPException(
             status_code=500, 
             detail="Failed to execute reset command on the device."
-        )
-
-    elif result == ReleaseResult.ALREADY_AVAILABLE:
-        # 200 OK，但告知前端已經是可用狀態
-        return ReleaseResponse(
-            status=ReleaseResult.ALREADY_AVAILABLE,
-            message="Machine was already available.",
-            machine=machine
         )
 
     elif result == ReleaseResult.SUCCESS:

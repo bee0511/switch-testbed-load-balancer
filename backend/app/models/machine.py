@@ -34,10 +34,8 @@ class ReserveRequest(BaseModel):
     
 class ReleaseResult(str, Enum):
     SUCCESS = "success"                 # 成功觸發重置
-    ALREADY_AVAILABLE = "already_available" # 機器已經是可用狀態，無需操作
-    NOT_FOUND = "not_found"             # 找不到該序號的機器
-    UNREACHABLE = "unreachable"         # 機器無法連線，無法執行重置指令
     FAILED = "failed"                   # SSH 連線或重置指令執行失敗
+    NOT_FOUND = "not_found"             # 找不到該序號的機器
 
 class ReleaseResponse(BaseModel):
     """API 回傳給前端的統一格式"""

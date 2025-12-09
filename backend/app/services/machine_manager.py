@@ -162,21 +162,18 @@ class MachineManager:
         if not machine:
             return ReleaseResult.NOT_FOUND
         
-        if machine.status == MachineStatus.AVAILABLE:
-            logger.info(f"Machine {serial} is already available.")
-            return ReleaseResult.ALREADY_AVAILABLE
-        
-        if machine.status == MachineStatus.UNREACHABLE:
-            logger.warning(f"Machine {serial} is unreachable, cannot release via SSH.")
-            return ReleaseResult.UNREACHABLE
-
-        # 非同步執行重置
-        success = await self.connector.reset_device(machine)
-        
-        if success:
-            machine.status = MachineStatus.REBOOTING
-            logger.info(f"Machine {serial} reset initiated. Status set to REBOOTING.")
-            return ReleaseResult.SUCCESS
+        if machine.status == MachineStatus.UNAVAILABLE:
+            # 非同步執行重置
+            success = await self.connector.reset_device(machine)
+            
+            if success:
+                machine.status = MachineStatus.REBOOTING
+                logger.info(f"Machine {serial} reset initiated. Status set to REBOOTING.")
+                return ReleaseResult.SUCCESS
+            else:
+                logger.error(f"Failed to release/reset {serial}")
+                return ReleaseResult.FAILED
         else:
-            logger.error(f"Failed to release/reset {serial}")
+            logger.info(f"Machine {serial} is {machine.status}.")
             return ReleaseResult.FAILED
+        

@@ -26,6 +26,10 @@
 在啟動前，您需要建立設備清單與登入憑證（檔案位於 `backend/config/` 目錄下）：
 
 ```bash
+# 0. 設定 API Token
+cp backend/.env.example backend/.env
+# 編輯 backend/.env，填入 API_BEARER_TOKEN
+
 # 1. 複製憑證範本
 cp backend/config/credentials.yaml.example backend/config/credentials.yaml
 
@@ -103,7 +107,8 @@ cd backend
 uv sync
 
 # 設定本地測試用的 API Token (不要提交到版本控制)
-export API_BEARER_TOKEN="your_secure_token"
+cp .env.example .env
+# 編輯 .env 填入 API_BEARER_TOKEN
 
 # 啟動開發伺服器 (自動重載)
 make dev

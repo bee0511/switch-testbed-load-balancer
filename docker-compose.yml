@@ -4,6 +4,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     container_name: switch-testbed-backend
     restart: unless-stopped
     ports:
@@ -11,8 +13,6 @@ services:
     volumes:
       - ./backend/logs:/app/logs
       - ./backend/config:/app/config
-    environment:
-      - API_BEARER_TOKEN=${API_BEARER_TOKEN:?API bearer token is required}
     cap_add:
       - NET_RAW
     healthcheck:

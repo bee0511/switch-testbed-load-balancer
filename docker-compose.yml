@@ -8,6 +8,8 @@ services:
     volumes:
       - ./backend/logs:/app/logs
       - ./backend/config:/app/config
+    environment:
+      - API_BEARER_TOKEN=${API_BEARER_TOKEN:?API bearer token is required}
     cap_add:
       - NET_RAW
     healthcheck:
@@ -16,7 +18,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    pull_policy: always
+    
 
   frontend:
     image: bee000092/switch-testbed-frontend:latest
@@ -29,7 +31,6 @@ services:
         condition: service_healthy
     environment:
       - VITE_API_BASE_URL=http://10.192.194.121:8000
-    pull_policy: always
 
 networks:
   default:

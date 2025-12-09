@@ -1,12 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 
 from app.api.routers import machines
 from app.core.logging import setup_logging
-from app.api.deps import get_machine_manager
+from app.api.deps import get_machine_manager, verify_bearer_token
 from app.services.machine_monitor import monitor_machines
 
 setup_logging()
@@ -15,7 +15,7 @@ logger = logging.getLogger("app.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    manager = get_machine_manager()
+    manager = await get_machine_manager()
     await manager.initialize_status() # 啟動時檢查一次
     
     # 啟動背景監控
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Switch Testbed Load Balancer", 
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -45,8 +45,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(machines.router, tags=["machines"])
+app.include_router(
+    machines.router,
+    tags=["machines"],
+    dependencies=[Depends(verify_bearer_token)],
+)
 
 @app.get("/health", tags=["health"])
-def health():
+async def health():
     return {"status": "ok"}

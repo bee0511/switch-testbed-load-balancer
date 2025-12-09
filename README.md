@@ -40,6 +40,7 @@ nano backend/config/device.yaml
 ### 2. 啟動服務
 
 ```bash
+export API_BEARER_TOKEN="your_secure_token"   # 請自行指定，勿提交到 Git
 # 拉取最新映像檔並啟動
 sudo docker compose up -d
 ```
@@ -48,6 +49,7 @@ sudo docker compose up -d
 
   - **前端頁面**：http://localhost:8080 (或伺服器 IP:8080)
   - **後端 API 文件**：http://localhost:8000/docs
+  - `/health` 為開放端點；其他 API 需要 `Authorization: Bearer $API_BEARER_TOKEN`。
 
 -----
 
@@ -95,6 +97,9 @@ cd backend
 
 # 安裝依賴
 uv sync
+
+# 設定本地測試用的 API Token (不要提交到版本控制)
+export API_BEARER_TOKEN="your_secure_token"
 
 # 啟動開發伺服器 (自動重載)
 make dev

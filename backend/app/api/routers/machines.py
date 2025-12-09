@@ -10,7 +10,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.get("/machines", response_model=dict)
-def list_machines(
+async def list_machines(
     vendor: Optional[str] = None,
     model: Optional[str] = None,
     version: Optional[str] = None,

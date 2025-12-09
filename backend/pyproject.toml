@@ -32,6 +32,9 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-multipart>=0.0.6",
     "pyyaml>=6.0",
+    "pytest>=8.4.2",
+    "httpx>=0.28.1",
+    "pytest-asyncio>=1.2.0",
 ]
 
 [project.optional-dependencies]
@@ -101,6 +104,7 @@ addopts = [
 markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
+    "asyncio: marks tests as asyncio tests",
 ]
 
 [tool.mypy]

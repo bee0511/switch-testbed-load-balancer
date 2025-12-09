@@ -27,10 +27,14 @@ const API_BASE_URL =
   // 4. 最後的備案
   "http://localhost:8000";
 
-export async function fetchMachines(): Promise<Machine[]> {
-  const response = await fetch(`${API_BASE_URL}/machines`);
+export async function fetchMachines(token?: string | null): Promise<Machine[]> {
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {};
+  const response = await fetch(`${API_BASE_URL}/machines`, { headers });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("需要有效的 API Token 才能存取機器清單。");
+    }
     throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
 

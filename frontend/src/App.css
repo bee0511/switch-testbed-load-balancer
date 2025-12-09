@@ -34,6 +34,43 @@
   gap: 0.75rem;
  }
 
+.token-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.token-chip span {
+  font-size: 0.85rem;
+  color: rgba(245, 247, 251, 0.8);
+}
+
+.token-chip__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.token-chip__actions button {
+  border: 1px solid rgba(245, 247, 251, 0.6);
+  background: transparent;
+  color: #f5f7fb;
+  border-radius: 10px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.token-chip__actions button:hover {
+  background: rgba(245, 247, 251, 0.12);
+}
+
+.token-chip__actions button.ghost {
+  border-color: rgba(245, 247, 251, 0.35);
+  color: rgba(245, 247, 251, 0.8);
+}
+
  .masthead__actions button {
   border: none;
   border-radius: 999px;
@@ -182,6 +219,36 @@
   margin: 1.5rem 0;
   color: #455266;
  }
+
+.token-empty {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 12px 32px rgba(23, 38, 62, 0.12);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.token-empty h3 {
+  margin: 0 0 0.5rem;
+  color: #1d2a3b;
+}
+
+.token-empty p {
+  margin: 0 0 1rem;
+  color: #4a5668;
+  line-height: 1.5;
+}
+
+.token-empty button {
+  border: none;
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+}
 
  .machine-grid {
   display: grid;

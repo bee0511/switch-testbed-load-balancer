@@ -1,6 +1,9 @@
 services:
   backend:
     image: bee000092/switch-testbed-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: switch-testbed-backend
     restart: unless-stopped
     ports:
@@ -18,10 +21,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    
+    pull_policy: always
 
   frontend:
     image: bee000092/switch-testbed-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: switch-testbed-frontend
     restart: unless-stopped
     ports:
@@ -31,6 +37,7 @@ services:
         condition: service_healthy
     environment:
       - VITE_API_BASE_URL=http://10.192.194.121:8000
+    pull_policy: always
 
 networks:
   default:

@@ -41,15 +41,19 @@ nano backend/config/device.yaml
 
 ```bash
 export API_BEARER_TOKEN="your_secure_token"   # 請自行指定，勿提交到 Git
-# 拉取最新映像檔並啟動
+# 拉取最新映像檔並啟動 (預設會 pull)
 sudo docker compose up -d
+
+# 如果要用本機程式碼建置映像，改用 --build
+sudo docker compose up --build -d
 ```
 
 服務啟動後：
 
-  - **前端頁面**：http://localhost:8080 (或伺服器 IP:8080)
+ - **前端頁面**：http://localhost:8080 (或伺服器 IP:8080)
   - **後端 API 文件**：http://localhost:8000/docs
   - `/health` 為開放端點；其他 API 需要 `Authorization: Bearer $API_BEARER_TOKEN`。
+  - 前端頁面右上角可點「輸入 Token」手動填入 Bearer Token（僅儲存在瀏覽器，不會上傳）。
 
 -----
 

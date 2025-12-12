@@ -44,7 +44,6 @@ nano backend/config/device.yaml
 ### 2. 啟動服務
 
 ```bash
-export API_BEARER_TOKEN="your_secure_token"   # 請自行指定，勿提交到 Git
 # 拉取最新映像檔並啟動 (預設會 pull)
 sudo docker compose up -d
 

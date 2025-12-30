@@ -221,3 +221,8 @@ data/
 
 # Credentials file - contains passwords
 credentials.yaml
+config/secrets/credentials.yaml
+config/secrets/*.enc
+config/secrets/*.age
+config/backend.env
+config/frontend.env

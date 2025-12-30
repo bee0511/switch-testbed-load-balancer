@@ -1,18 +1,21 @@
 services:
   backend:
-    image: bee000092/switch-testbed-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
     env_file:
-      - ./backend/.env
+      - ./config/backend.env
+    environment:
+      - CONFIG_DIR=/app/config
+      - CREDENTIALS_PATH=/app/secrets/credentials.yaml
     container_name: switch-testbed-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
       - ./backend/logs:/app/logs
-      - ./backend/config:/app/config
+      - ./config/base:/app/config:ro
+      - ./config/secrets:/app/secrets:ro
     cap_add:
       - NET_RAW
     healthcheck:
@@ -21,13 +24,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    pull_policy: always
 
   frontend:
-    image: bee000092/switch-testbed-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    env_file:
+      - ./config/frontend.env
     container_name: switch-testbed-frontend
     restart: unless-stopped
     ports:
@@ -35,9 +38,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      - VITE_API_BASE_URL=http://10.192.194.121:8000
-    pull_policy: always
 
 networks:
   default:

@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+import os
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
@@ -12,9 +13,16 @@ from app.services.machine_monitor import monitor_machines
 setup_logging()
 logger = logging.getLogger("app.main")
 
+def _require_env(var_name: str) -> str:
+    value = os.getenv(var_name)
+    if not value:
+        raise RuntimeError(f"Required environment variable {var_name} is not set.")
+    return value
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    _require_env("API_BEARER_TOKEN")
     manager = await get_machine_manager()
     await manager.initialize_status() # 啟動時檢查一次
     

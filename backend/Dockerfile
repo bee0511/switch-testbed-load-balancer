@@ -30,19 +30,12 @@ RUN uv sync --frozen --no-install-project --no-dev
 
 # 3. 複製程式碼與設定檔
 COPY app/ ./app/
-COPY config/ ./config/
-
-# [安全措施] 強制刪除可能不小心被 COPY 進來的真實憑證檔
-RUN rm -f ./config/credentials.yaml
+RUN mkdir -p /app/config /app/secrets
 
 # 4. 安裝專案本身
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8000
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
 
 # 啟動命令
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

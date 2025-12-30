@@ -17,19 +17,11 @@ RUN npm ci --silent
 # 3. 複製原始碼
 COPY . .
 
-# 4. 接收 Build Argument (這是關鍵修改)
-# 預設值可以是 localhost，但在 docker-compose 中我們會覆寫它
-ARG VITE_API_BASE_URL=http://localhost:8000
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-
-# 5. 建置 (這時候 Vite 會把 ENV 的值寫死進 JS 檔案)
+# 4. 建置
 RUN npm run build
 
 # --- 生產階段 ---
 FROM nginx:alpine
-
-# 安裝 shell (alpine 預設有 sh，但為了保險)
-RUN apk add --no-cache bash
 
 # 複製建置成果
 COPY --from=builder /app/dist /usr/share/nginx/html

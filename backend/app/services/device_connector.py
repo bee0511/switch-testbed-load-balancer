@@ -23,8 +23,17 @@ class DeviceConnector:
         self.credentials, self.default_cred = self.settings.load_credentials()
 
     def _get_auth(self, serial: str) -> Tuple[str, str]:
-        cred = self.credentials.get(serial, self.default_cred)
-        return cred.get("username", "admin"), cred.get("password", "")
+        cred = self.credentials.get(serial) or self.default_cred
+        if not cred:
+            raise RuntimeError(f"No credentials found for device {serial} and no default provided.")
+
+        username = cred.get("username")
+        password = cred.get("password")
+
+        if not username or not password:
+            raise RuntimeError(f"Credentials for device {serial} are incomplete.")
+
+        return username, password
 
     async def is_reachable(self, ip: str) -> bool:
         """非同步 Ping 檢查"""

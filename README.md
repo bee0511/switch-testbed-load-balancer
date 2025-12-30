@@ -19,33 +19,32 @@
 
 ## 🚀 快速開始 (使用 Docker Compose)
 
-這是最推薦的部署方式。
+本倉庫僅供開發使用，所有設定集中在 `config/`，缺少設定會直接啟動失敗。正式部署請使用獨立的 config repo：https://github.com/bee0511/switch-testbed-load-balancer-config
 
 ### 1. 準備設定檔
 
-在啟動前，您需要建立設備清單與登入憑證（檔案位於 `backend/config/` 目錄下）：
-
 ```bash
-# 0. 設定 API Token
-cp backend/.env.example backend/.env
-# 編輯 backend/.env，填入 API_BEARER_TOKEN
+# 1) 設備清單 (非敏感)
+nano config/base/device.yaml
 
-# 1. 複製憑證範本
-cp backend/config/credentials.yaml.example backend/config/credentials.yaml
+# 2) 建立 SSH 憑證檔 (已在 .gitignore)
+cp config/secrets/credentials.yaml.example config/secrets/credentials.yaml
+nano config/secrets/credentials.yaml
 
-# 2. 編輯 credentials.yaml 填入設備的 SSH 帳號密碼
-# (此檔案已被 gitignore，請放心填寫)
-nano backend/config/credentials.yaml
-
-# 3. 確認 device.yaml 中定義了您的設備清單
-nano backend/config/device.yaml
+# 3) 設定環境變數檔 (本 repo 只提供 development)
+cp config/backend.env.example config/backend.env
+cp config/frontend.env.example config/frontend.env
+nano config/backend.env    # API_BEARER_TOKEN (後端 API 的驗證 Token)
+nano config/frontend.env   # VITE_API_BASE_URL (瀏覽器要連線到後端 API 的 URL)
 ```
 
 ### 2. 啟動服務
 
 ```bash
-# 拉取最新映像檔並啟動 (預設會 pull)
+# 開發環境 (使用 config/*.env)
 sudo docker compose up -d
+
+# 正式環境：請在 config repo (https://github.com/bee0511/switch-testbed-load-balancer-config) 執行該 repo 內的 docker-compose.yml
 
 # 如果要用本機程式碼建置映像，改用 --build
 sudo docker compose up --build -d
@@ -57,37 +56,6 @@ sudo docker compose up --build -d
   - **後端 API 文件**：http://localhost:8000/docs
   - `/health` 為開放端點；其他 API 需要 `Authorization: Bearer $API_BEARER_TOKEN`。
   - 前端頁面右上角可點「輸入 Token」手動填入 Bearer Token（僅儲存在瀏覽器，不會上傳）。
-
------
-
-## ⚙️ 設定指南
-
-### 修改後端 API 連線地址 (前端設定)
-
-本專案前端支援 **Runtime Configuration**，這意味著您可以在啟動容器時動態指定後端的 URL，而**不需要重新建置 (Rebuild)** 映像檔。
-
-**方法：修改 `docker-compose.yml`**
-
-找到 `frontend` 服務下的 `environment` 區塊，修改 `VITE_API_BASE_URL`：
-
-```yaml
-  frontend:
-    image: bee000092/switch-testbed-frontend:latest
-    # ...
-    environment:
-      # 修改此處為實際的後端 IP 或 Domain
-      # 注意：這是瀏覽器要連線的地址，請勿填寫 Docker 內部 IP
-      - VITE_API_BASE_URL={YOUR_IP_HERE}
-```
-
-修改後，只需執行 `sudo docker compose up -d` 即可生效。
-
-設定檔位於 **`backend/config/`** 目錄下：
-
-  - **`backend/config/device.yaml`**：定義設備的靜態資訊 (IP, Port, Serial, Model)。
-  - **`backend/config/credentials.yaml`**：定義設備的 SSH 登入資訊。
-      - 系統會優先匹配 `serial_number`。
-      - 若找不到特定序號的憑證，會使用 `default` 區塊的帳密。
 
 -----
 
@@ -107,7 +75,9 @@ uv sync
 
 # 設定本地測試用的 API Token (不要提交到版本控制)
 cp .env.example .env
-# 編輯 .env 填入 API_BEARER_TOKEN
+# 建議沿用集中設定
+export CONFIG_DIR=$(realpath ../config/base)
+export CREDENTIALS_PATH=$(realpath ../config/secrets/credentials.yaml)
 
 # 啟動開發伺服器 (自動重載)
 make dev
@@ -123,7 +93,7 @@ cd frontend
 npm install
 
 # 設定本地開發環境變數
-# 建立 .env 檔案並填入: VITE_API_BASE_URL=http://localhost:8000
+# 建立 .env 檔案並填入: VITE_API_BASE_URL (可直接沿用 config/frontend.env)
 cp .env.example .env
 
 # 啟動開發伺服器

@@ -85,6 +85,15 @@ async def test_refresh_machine_status_marks_unavailable_on_serial_mismatch(manag
 
 
 @pytest.mark.asyncio
+async def test_refresh_machine_status_marks_available_on_match(manager):
+    machine = manager.get_machine("S1")
+    manager.connector.is_reachable_map[machine.mgmt_ip] = True
+    manager.connector.serial_map[machine.serial] = machine.serial
+    await manager.refresh_machine_status(machine)
+    assert machine.status == MachineStatus.AVAILABLE
+
+
+@pytest.mark.asyncio
 async def test_reserve_machine_success_sets_unavailable(manager):
     reserved = await manager.reserve_machine("cisco", "n9k", "9.3")
     assert reserved.serial == "S1"
@@ -145,3 +154,28 @@ async def test_reload_machines_preserves_status_and_updates_list(manager, config
     assert count == 3
     assert manager.get_machine("S1").status == MachineStatus.UNAVAILABLE
     assert manager.get_machine("S2").hostname == "leaf2"
+
+
+def test_parse_config_to_machines_skips_invalid_entries(manager, caplog):
+    config = {
+        "cisco": "invalid",
+        "hp": {"5945": "invalid"},
+        "juniper": {"qfx": {"1.0": "invalid"}},
+        "missing": {"m1": {"1.0": [{"mgmt_ip": "10.0.0.9"}]}},
+        "broken": {"m2": {"1.0": [None]}},
+        "valid": {"v1": {"1.0": [{"serial": "OK1", "mgmt_ip": "10.0.0.10"}]}},
+    }
+
+    with caplog.at_level("ERROR"):
+        parsed = manager._parse_config_to_machines(config)
+
+    assert set(parsed.keys()) == {"OK1"}
+    assert "Missing field" in caplog.text
+    assert "Error parsing device config" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_initialize_status_runs_refresh(manager):
+    await manager.initialize_status()
+    statuses = {machine.status for machine in manager._machines.values()}
+    assert statuses == {MachineStatus.AVAILABLE}

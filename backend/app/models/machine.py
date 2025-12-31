@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class MachineStatus(str, Enum):
     AVAILABLE = "available"
@@ -23,9 +23,7 @@ class MachineBase(BaseModel):
 class Machine(MachineBase):
     """包含狀態的完整機器物件"""
     status: MachineStatus = MachineStatus.AVAILABLE
-
-    class Config:
-        from_attributes = True # 允許從 dict 或物件轉換
+    model_config = ConfigDict(from_attributes=True)
 
 class ReserveRequest(BaseModel):
     vendor: str

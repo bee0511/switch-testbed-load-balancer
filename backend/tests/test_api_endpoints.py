@@ -192,6 +192,16 @@ async def test_release_machine_failed(client, fake_manager):
     assert response.json()["detail"] == "Failed to execute reset command on the device."
 
 
+async def test_release_machine_unknown_error(client, fake_manager):
+    async def release_machine_override(serial):
+        return "unexpected"
+
+    fake_manager.release_machine = release_machine_override
+    response = await client.post("/release/S2")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Unknown error"
+
+
 async def test_reload_configuration_success(client):
     response = await client.post("/admin/reload")
     assert response.status_code == 200

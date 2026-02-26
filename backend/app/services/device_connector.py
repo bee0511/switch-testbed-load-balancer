@@ -83,6 +83,10 @@ class DeviceConnector:
                     self._ssh_exec, machine, user, password, restore_cmds, timeout=8
                 )
                 logger.info(f"[{machine.serial}] Restore Config Output:\n{output}")
+                # Abort when the output contains permission denied
+                if "permission denied" in output.lower():
+                    logger.error(f"[{machine.serial}] Permission denied during config restore.")
+                    return False
                 
             except Exception as e:
                 logger.error(f"[{machine.serial}] Failed to restore config: {e}")
@@ -92,6 +96,7 @@ class DeviceConnector:
             
             # N9K reload 會導致連線中斷，這是預期的
             try:
+                logger.info(f"[{machine.serial}] Sending reload command...")
                 await asyncio.to_thread(
                     self._ssh_exec, machine, user, password, reload_cmds, timeout=8
                 )
